@@ -1,0 +1,20 @@
+<% content_for :page_title, '유저 상세' %>
+<div class="page-header">
+  <h1><%= @user.nickname || @user.email %></h1>
+  <%= link_to '← 목록', admin_users_path, class: 'btn btn-ghost btn-sm' %>
+</div>
+
+<div class="detail-grid">
+  <div class="card" style="padding: 20px;">
+    <h3 style="font-size:13px; font-weight:600; margin-bottom:16px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">기본 정보</h3>
+    <div class="detail-item"><label>이메일</label><span><%= @user.email %></span></div>
+    <div class="detail-item"><label>닉네임</label><span><%= @user.nickname %></span></div>
+    <div class="detail-item"><label>유저명</label><span>@<%= @user.username %></span></div>
+    <div class="detail-item"><label>가입일</label><span><%= @user.created_at.strftime('%Y.%m.%d %H:%M') %></span></div>
+  </div>
+  <div class="card" style="padding: 20px;">
+    <h3 style="font-size:13px; font-weight:600; margin-bottom:16px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">활동 통계</h3>
+    <div class="detail-item"><label>좋아요 수</label><span><%= @posts_liked %></span></div>
+    <div class="detail-item"><label>팔로우 수</label><span><%= @follows %></span></div>
+  </div>
+</div>

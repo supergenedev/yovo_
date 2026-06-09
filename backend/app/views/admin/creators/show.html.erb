@@ -1,0 +1,28 @@
+<% content_for :page_title, '크리에이터 상세' %>
+<div class="page-header">
+  <h1><%= @creator.nickname %></h1>
+  <%= link_to '← 목록', admin_creators_path, class: 'btn btn-ghost btn-sm' %>
+</div>
+
+<div class="detail-grid">
+  <div class="card" style="padding: 20px;">
+    <h3 style="font-size:13px; font-weight:600; margin-bottom:16px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">기본 정보</h3>
+    <div class="detail-item"><label>닉네임</label><span><%= @creator.nickname %></span></div>
+    <div class="detail-item"><label>유저명</label><span>@<%= @creator.username %></span></div>
+    <div class="detail-item"><label>팔로워</label><span><%= @creator.followers_count || 0 %></span></div>
+    <div class="detail-item"><label>소개</label><span><%= @creator.introduction %></span></div>
+    <div class="detail-item"><label>등록일</label><span><%= @creator.created_at.strftime('%Y.%m.%d') %></span></div>
+  </div>
+  <div class="card" style="padding: 20px;">
+    <h3 style="font-size:13px; font-weight:600; margin-bottom:16px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">최근 포스트</h3>
+    <% @posts.each do |post| %>
+      <div style="padding: 8px 0; border-bottom: 1px solid #f1f5f9;">
+        <%= link_to truncate(post.title_ko, length: 30), admin_post_path(post), style: 'color:#6366f1; font-size:14px;' %>
+        <span style="color:#94a3b8; font-size:12px; margin-left:8px;"><%= post.created_at.strftime('%m.%d') %></span>
+      </div>
+    <% end %>
+    <% if @posts.empty? %>
+      <div class="empty-state">포스트가 없습니다</div>
+    <% end %>
+  </div>
+</div>

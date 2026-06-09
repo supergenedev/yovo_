@@ -1,7 +1,16 @@
 Rails.application.routes.draw do
-  devise_for :admin_users, ActiveAdmin::Devise.config
-  ActiveAdmin.routes(self)
   get "up" => "rails/health#show", as: :rails_health_check
+
+  # Admin panel
+  namespace :admin do
+    get  "login",  to: "sessions#new",     as: :login
+    post "login",  to: "sessions#create"
+    delete "logout", to: "sessions#destroy", as: :logout
+    root to: "dashboard#index"
+    resources :users,    only: %i[index show destroy]
+    resources :creators, only: %i[index show]
+    resources :posts,    only: %i[index show destroy]
+  end
 
   # Legacy health check
   namespace :api do

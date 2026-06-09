@@ -1,0 +1,23 @@
+<% content_for :page_title, '포스트 상세' %>
+<div class="page-header">
+  <h1><%= truncate(@post.title_ko, length: 40) %></h1>
+  <%= link_to '← 목록', admin_posts_path, class: 'btn btn-ghost btn-sm' %>
+</div>
+
+<div class="detail-grid">
+  <div class="card" style="padding: 20px;">
+    <h3 style="font-size:13px; font-weight:600; margin-bottom:16px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">포스트 정보</h3>
+    <div class="detail-item"><label>제목</label><span><%= @post.title_ko %></span></div>
+    <div class="detail-item"><label>크리에이터</label><span><%= @post.creator_user&.nickname %></span></div>
+    <div class="detail-item"><label>공개 유형</label><span><%= @post.view_type %></span></div>
+    <div class="detail-item"><label>콘텐츠 유형</label><span><%= @post.content_type %></span></div>
+    <div class="detail-item"><label>상태</label><span><%= @post.status %></span></div>
+    <div class="detail-item"><label>좋아요</label><span><%= @post.likes_count %></span></div>
+    <div class="detail-item"><label>댓글</label><span><%= @post.comments_count %></span></div>
+    <div class="detail-item"><label>등록일</label><span><%= @post.created_at.strftime('%Y.%m.%d %H:%M') %></span></div>
+  </div>
+  <div class="card" style="padding: 20px;">
+    <h3 style="font-size:13px; font-weight:600; margin-bottom:16px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">본문</h3>
+    <p style="font-size:14px; color:#334155; line-height:1.7; white-space:pre-wrap;"><%= @post.body_ko %></p>
+  </div>
+</div>

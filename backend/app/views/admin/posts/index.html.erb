@@ -1,0 +1,31 @@
+<% content_for :page_title, '포스트 관리' %>
+<div class="page-header">
+  <h1>포스트 <span style="color:#94a3b8; font-weight:400; font-size:15px;"><%= @pagy.count %>개</span></h1>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>ID</th><th>제목</th><th>크리에이터</th><th>타입</th><th>상태</th><th>좋아요</th><th>등록일</th><th></th></tr>
+    </thead>
+    <tbody>
+      <% @posts.each do |post| %>
+        <tr>
+          <td style="color:#94a3b8; font-size:12px;"><%= post.id %></td>
+          <td><%= link_to truncate(post.title_ko, length: 25), admin_post_path(post), style: 'color:#6366f1;' %></td>
+          <td><%= post.creator_user&.nickname %></td>
+          <td><span class="badge badge-blue"><%= post.view_type %></span></td>
+          <td><span class="badge badge-green"><%= post.status %></span></td>
+          <td><%= post.likes_count %></td>
+          <td style="color:#64748b;"><%= post.created_at.strftime('%Y.%m.%d') %></td>
+          <td>
+            <%= button_to '삭제', admin_post_path(post), method: :delete,
+                data: { turbo_confirm: '삭제할까요?' },
+                class: 'btn btn-danger btn-sm' %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+</div>

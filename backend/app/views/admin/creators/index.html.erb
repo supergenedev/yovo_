@@ -1,0 +1,25 @@
+<% content_for :page_title, '크리에이터 관리' %>
+<div class="page-header">
+  <h1>크리에이터 <span style="color:#94a3b8; font-weight:400; font-size:15px;"><%= @pagy.count %>명</span></h1>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>ID</th><th>닉네임</th><th>유저명</th><th>팔로워</th><th>등록일</th><th></th></tr>
+    </thead>
+    <tbody>
+      <% @creators.each do |creator| %>
+        <tr>
+          <td style="color:#94a3b8; font-size:12px;"><%= creator.id %></td>
+          <td><%= link_to creator.nickname, admin_creator_path(creator), style: 'color:#6366f1;' %></td>
+          <td style="color:#64748b;">@<%= creator.username %></td>
+          <td><%= creator.followers_count || 0 %></td>
+          <td style="color:#64748b;"><%= creator.created_at.strftime('%Y.%m.%d') %></td>
+          <td><%= link_to '보기', admin_creator_path(creator), class: 'btn btn-ghost btn-sm' %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+</div>
