@@ -13,6 +13,11 @@ module Api
         default_success_render
       end
 
+      def following
+        creators = current_user.following_creator_users
+        render json: creators, each_serializer: CreatorUserSerializer, scope: current_user, status: :ok
+      end
+
       def recommend
         followed_ids = current_user.following_creator_users.pluck(:id)
         creators = CreatorUser.where(status: :active).where.not(id: followed_ids + [current_user.creator_user&.id].compact)

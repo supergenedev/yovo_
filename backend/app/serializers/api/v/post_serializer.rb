@@ -15,7 +15,12 @@ module Api
       end
 
       attribute :interaction_with_me do
-        PostInteractionWithMeSerializer.new(object, scope: scope).as_json if scope
+        next nil unless scope
+        {
+          liked:     PostLike.exists?(user_id: scope.id, post_id: object.id),
+          bookmarked: Bookmark.exists?(user_id: scope.id, post_id: object.id),
+          seen:      PostSeen.exists?(user_id: scope.id, post_id: object.id),
+        }
       end
     end
   end

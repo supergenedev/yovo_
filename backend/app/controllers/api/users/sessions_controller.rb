@@ -1,32 +1,36 @@
 module Api
   module Users
-    class SessionsController < Devise::SessionsController
-      skip_before_action :verify_authenticity_token
-      respond_to :json
-
+    class SessionsController < ::ApplicationController
       def create
-        user = User.find_for_database_authentication(email: params[:email])
+        user = User.find_for_database_authentication(email: params.dig(:user, :email))
 
-        unless user&.valid_password?(params[:password])
+        unless user&.valid_password?(params.dig(:user, :password))
           return render json: {
             code: 401, type: "unauthorized",
             message: "이메일 또는 비밀번호가 올바르지 않습니다.", title: nil
           }, status: :unauthorized
         end
 
-        sign_in(:user, user)
-        access_token = "Bearer #{request.env['warden-jwt_auth.token']}"
-        render json: user, serializer: Api::V::UserSerializer, status: :ok, access_token: access_token
+        token, payload = Warden::JWTAuth::UserEncoder.new.call(user, :user, nil)
+        user.on_jwt_dispatch(token, payload)
+        render json: user, serializer: Api::V::UserSerializer, status: :ok, access_token: token
       end
 
-      private
-
-      def respond_to_on_destroy
-        if current_user
-          render json: { code: 200, type: "success", message: "logged out successfully", title: nil }, status: :ok
-        else
-          render json: { code: 401, type: "unauthorized", message: "Unauthorized", title: nil }, status: :unauthorized
+      def destroy
+        raw_token = request.env['HTTP_AUTHORIZATION']&.delete_prefix('Bearer ')&.strip
+        if raw_token.present?
+          begin
+            secret = Warden::JWTAuth.config.secret
+            payload = JWT.decode(raw_token, secret, true, algorithms: ['HS256']).first
+            User.find_by(id: payload['sub'])
+                &.allowlisted_jwts
+                &.find_by(jti: payload['jti'])
+                &.destroy
+          rescue StandardError
+            # invalid/expired token — no-op
+          end
         end
+        render json: { code: 200, type: "success", message: "logged out successfully", title: nil }, status: :ok
       end
     end
   end

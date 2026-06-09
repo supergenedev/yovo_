@@ -33,7 +33,7 @@ function normalizeStickyOffset(val) {
 }
 
 const normalizedItems = computed(() =>
-  props.items.map((item, index) => ({
+  (props.items ?? []).map((item, index) => ({
     ...item,
     id: item.id ?? `tab-${index}`,
   }))

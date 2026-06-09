@@ -1,10 +1,5 @@
 <script setup>
 import {
-  Sidebar,
-  SidebarFollowRow,
-  SidebarGroup,
-  SidebarItem,
-  SidebarFooter,
   Stack,
   Text,
   UserBlock,
@@ -24,13 +19,18 @@ import {
   VideoListCard,
   SectionTitleGroup,
 } from '@/components'
-import { onMounted } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useLibraryStore } from '@/stores/library'
 
 const libraryStore = useLibraryStore()
+const selectedTab = ref(0)
 
 onMounted(() => {
-  libraryStore.fetchBookmarks()
+  libraryStore.fetchPurchased()
+})
+
+watch(selectedTab, (val) => {
+  if (val === 1 && libraryStore.bookmarks.length === 0) libraryStore.fetchBookmarks()
 })
 
 function timeAgo(ms) {
@@ -52,84 +52,6 @@ function timeAgo(ms) {
     align="stretch"
     gap="lg"
   >
-    <!-- LEFT — SIDEBAR -->
-    <Sidebar
-      :style="{ width: '272px' }"
-      :collapsed="false"
-      collapsedWidth="72"
-      headerLogoImage="/workbench-assets/icons/logo-mpks329o.svg"
-      headerSymbolImage="/workbench-assets/icons/symbol-mpks329n.svg"
-      presentation="sidebar"
-      width="272px"
-      background="none"
-      :bordered="false"
-      radius="none"
-      brandMarkText="Y"
-      expandedBrandDisplay="symbol-logo"
-      height="100vh"
-    >
-      <SidebarGroup seeAllIcon="chevron-right">
-        <UserCard name="Hailey Luna" initials="HL" meta="Creator · live now" variant="outline" tint="sunken">
-          <UserCardHead>
-            <UserBlock
-              action3Icon=""
-              action3Variant="ghost"
-              action2Icon=""
-              avatarSize="sm"
-              avatarSrc="https://i.pinimg.com/736x/cb/12/b2/cb12b2f39982bf66734cd7e5a34eb891.jpg"
-              :style="{ width: '100%' }"
-              name="Munhee J"
-              meta="@munhee · 크리에이터"
-              initials="MJ"
-              avatarTone="purple"
-              :verified="true"
-              size="md"
-            >
-              <ButtonPopover
-                :style="{ width: '32px' }"
-                leadingIcon="ellipsis"
-                :iconOnly="true"
-                trailingIcon="chevron-down"
-                placement="bottom-start"
-                buttonLabel="최신순"
-                buttonShape="pill"
-                buttonSize="sm"
-                buttonVariant="ghost"
-                :closeOnItemClick="true"
-              >
-                <PopoverList>
-                  <PopoverItem icon="circle-user">프로필</PopoverItem>
-                  <PopoverItem icon="layout-dashboard">대시보드</PopoverItem>
-                  <PopoverItem icon="settings">설정</PopoverItem>
-                </PopoverList>
-              </ButtonPopover>
-            </UserBlock>
-          </UserCardHead>
-        </UserCard>
-      </SidebarGroup>
-
-      <SidebarGroup seeAllIcon="chevron-right">
-        <SidebarItem :emphasized="false" badgeVariant="subtle" icon="plus" label="작품 만들기" :active="false" />
-      </SidebarGroup>
-
-      <SidebarGroup>
-        <SidebarItem icon="house" label="홈" :active="false" />
-        <SidebarItem icon="layout-grid" label="탐색" :active="false" />
-        <SidebarItem icon="book-marked" label="구매목록" :active="true" />
-        <SidebarItem badge="12" icon="bell-dot" label="알림" :active="false" />
-      </SidebarGroup>
-
-      <SidebarGroup count="45" seeAllLabel="모두보기" label="팔로잉">
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/736x/ac/30/ad/ac30ad5b4d550027ff5be9fe95e3f196.jpg" size="sm" name="Hailey Luna" initials="HL" avatarTone="brand" status="live" tail="LIVE" tailStatus="live" tailVariant="plain" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/b9/45/02/b94502342dfd29c213a99bb1d93c151d.jpg" size="sm" name="NeoVoice" initials="NV" avatarTone="teal" tail="방송중" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/e8/df/8e/e8df8ee3fd256e1fa1b1714a59d03517.jpg" size="sm" name="코다 / Koda" initials="KO" avatarTone="amber" tail="작업중" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg" size="sm" name="Ren Morimoto" initials="RM" avatarTone="purple" tail="5분" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/736x/ac/30/ad/ac30ad5b4d550027ff5be9fe95e3f196.jpg" size="sm" name="aether.studio" initials="AT" avatarTone="coral" tail="3시간" as="button" />
-      </SidebarGroup>
-
-      <SidebarFooter primaryLabel="다크모드" primaryIcon="moon" secondaryLabel="설정" secondaryIcon="settings" />
-    </Sidebar>
-
     <!-- MAIN COLUMN -->
     <Stack
       align="center"
@@ -189,13 +111,13 @@ function timeAgo(ms) {
               label="라이브러리 탭"
             >
               <TabsList :style="{ width: '100%', paddingTop: 'var(--ds-spacing-space-1)', height: 'fit-content', borderStyle: 'none' }">
-                <Tab leadingIcon="list-video" badgeText="10" :badge="true" badgeVariant="neutral" :selected="true">구매한 작품</Tab>
-                <Tab leadingIcon="bookmark" badgeText="8" :badge="true" badgeVariant="neutral" :selected="false">즐겨찾기</Tab>
-                <Tab leadingIcon="clock" badgeText="12" :badge="true" badgeVariant="neutral" :selected="false">최근 본</Tab>
+                <Tab leadingIcon="list-video" badgeText="10" :badge="true" badgeVariant="neutral" :selected="selectedTab === 0" @click="selectedTab = 0">구매한 작품</Tab>
+                <Tab leadingIcon="bookmark" badgeText="8" :badge="true" badgeVariant="neutral" :selected="selectedTab === 1" @click="selectedTab = 1">즐겨찾기</Tab>
+                <Tab leadingIcon="clock" badgeText="12" :badge="true" badgeVariant="neutral" :selected="selectedTab === 2" @click="selectedTab = 2">최근 본</Tab>
               </TabsList>
             </TabsBar>
 
-            <TabsPanel :style="{ width: '100%', paddingTop: 'var(--ds-spacing-space-4)' }" :selected="true">
+            <TabsPanel :style="{ width: '100%', paddingTop: 'var(--ds-spacing-space-4)' }" :selected="selectedTab === 0">
               <Stack :scrollFade="false" :style="{ width: '100%' }" direction="column" gap="md">
 
                 <!-- CARD GRID -->
@@ -234,10 +156,10 @@ function timeAgo(ms) {
                 </Stack>
 
                 <!-- 로딩 -->
-                <Text v-if="libraryStore.loading && libraryStore.bookmarks.length === 0" tone="tertiary">불러오는 중...</Text>
+                <Text v-if="libraryStore.loading && libraryStore.purchased.length === 0" tone="tertiary">불러오는 중...</Text>
 
                 <!-- 빈 상태 -->
-                <Text v-else-if="!libraryStore.loading && libraryStore.bookmarks.length === 0" tone="tertiary">저장된 작품이 없습니다.</Text>
+                <Text v-else-if="!libraryStore.loading && libraryStore.purchased.length === 0" tone="tertiary">구매한 작품이 없습니다.</Text>
 
                 <CardGrid
                   v-else
@@ -245,7 +167,7 @@ function timeAgo(ms) {
                   itemMaxSize="280px"
                   :style="{ width: '100%' }"
                   cols="4"
-                  :count="libraryStore.bookmarks.length"
+                  :count="libraryStore.purchased.length"
                   itemSize="auto"
                   layout="grid"
                   gap="sm"
@@ -253,16 +175,13 @@ function timeAgo(ms) {
                   scroll="smooth"
                 >
                   <Stack
-                    v-for="post in libraryStore.bookmarks"
+                    v-for="post in libraryStore.purchased"
                     :key="post.id"
                     as="article"
                     direction="column"
                     gap="xxs"
                     :style="{ width: '100%', height: 'fit-content' }"
                   >
-                    <Stack direction="row" align="center" gap="xs" :wrap="false">
-                      <Text as="span" tone="tertiary" variant="body-sm" weight="regular">{{ timeAgo(post.created_at) }}</Text>
-                    </Stack>
                     <VideoListCard
                       :thumbnailImageUrl="post.locked_thumbnail_url ?? undefined"
                       :avatarSrc="post.creator_user?.profile_image ?? undefined"
@@ -270,9 +189,6 @@ function timeAgo(ms) {
                       :title="post.title_ko ?? post.title ?? ''"
                       :creatorName="post.creator_user?.nickname ?? ''"
                       :meta="timeAgo(post.created_at)"
-                      :duration="post.duration ?? undefined"
-                      actionLabel="More options"
-                      actionSize="sm"
                       thumbnailAspect="16/9"
                       :avatarAlt="post.creator_user?.nickname ?? ''"
                       :avatarInitials="(post.creator_user?.nickname ?? '?')[0]"
@@ -292,16 +208,66 @@ function timeAgo(ms) {
                 </CardGrid>
 
                 <!-- LOAD MORE -->
-                <Stack v-if="libraryStore.hasMore" direction="row" justify="center" padding="lg" :style="{ width: '100%' }">
-                  <Button
-                    variant="soft"
-                    shape="pill"
-                    size="md"
-                    trailingIcon="chevron-down"
-                    :disabled="libraryStore.loading"
-                    @click="libraryStore.loadMore()"
-                  >더 많은 작품 불러오기</Button>
+                <Stack v-if="libraryStore.hasPurchasedMore" direction="row" justify="center" padding="lg" :style="{ width: '100%' }">
+                  <Button variant="soft" shape="pill" size="md" trailingIcon="chevron-down" :disabled="libraryStore.loading" @click="libraryStore.fetchPurchased((libraryStore.purchasedMeta?.page ?? 1) + 1)">더 많은 작품 불러오기</Button>
                 </Stack>
+              </Stack>
+            </TabsPanel>
+
+            <!-- 즐겨찾기 패널 -->
+            <TabsPanel :style="{ width: '100%', paddingTop: 'var(--ds-spacing-space-4)' }" :selected="selectedTab === 1">
+              <Stack :scrollFade="false" :style="{ width: '100%' }" direction="column" gap="md">
+                <Text v-if="libraryStore.loading && libraryStore.bookmarks.length === 0" tone="tertiary">불러오는 중...</Text>
+                <Text v-else-if="!libraryStore.loading && libraryStore.bookmarks.length === 0" tone="tertiary">즐겨찾기한 작품이 없습니다.</Text>
+                <CardGrid
+                  v-else
+                  itemMinSize="200px"
+                  itemMaxSize="280px"
+                  :style="{ width: '100%' }"
+                  cols="4"
+                  :count="libraryStore.bookmarks.length"
+                  itemSize="auto"
+                  layout="grid"
+                  gap="sm"
+                  :arrows="false"
+                  scroll="smooth"
+                >
+                  <Stack v-for="post in libraryStore.bookmarks" :key="post.id" as="article" direction="column" gap="xxs" :style="{ width: '100%', height: 'fit-content' }">
+                    <VideoListCard
+                      :thumbnailImageUrl="post.locked_thumbnail_url ?? undefined"
+                      :avatarSrc="post.creator_user?.profile_image ?? undefined"
+                      :style="{ height: 'fit-content' }"
+                      :title="post.title_ko ?? post.title ?? ''"
+                      :creatorName="post.creator_user?.nickname ?? ''"
+                      :meta="timeAgo(post.created_at)"
+                      thumbnailAspect="16/9"
+                      :avatarAlt="post.creator_user?.nickname ?? ''"
+                      :avatarInitials="(post.creator_user?.nickname ?? '?')[0]"
+                      :showGrain="true"
+                      variant="vertical"
+                      avatarTone="neutral"
+                      titleLines="3"
+                      size="sm"
+                      avatarSize="sm"
+                      avatarShape="circle"
+                      thumbnailBackground="linear-gradient(140deg, #0c1429, #4c1d95 50%, #be185d)"
+                      actionIcon="ellipsis"
+                      mediaSize="sm"
+                      :showAction="true"
+                    />
+                  </Stack>
+                </CardGrid>
+                <Stack v-if="libraryStore.hasMore" direction="row" justify="center" padding="lg">
+                  <Button variant="soft" shape="pill" size="md" trailingIcon="chevron-down" :disabled="libraryStore.loading" @click="libraryStore.loadMore()">더 많은 작품 불러오기</Button>
+                </Stack>
+              </Stack>
+            </TabsPanel>
+
+            <!-- 최근 본 패널 -->
+            <TabsPanel :style="{ width: '100%', paddingTop: 'var(--ds-spacing-space-4)' }" :selected="selectedTab === 2">
+              <Stack align="center" justify="center" padding="2xl" direction="column" gap="sm">
+                <Text tone="tertiary" variant="body-lg">최근 본 기록이 없습니다.</Text>
+                <Text tone="tertiary" variant="body-sm">작품을 감상하면 여기에 기록됩니다.</Text>
               </Stack>
             </TabsPanel>
 

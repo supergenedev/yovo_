@@ -42,7 +42,7 @@ export const useDmStore = defineStore('dm', () => {
         method: 'POST',
         body: { message },
       })
-      messages.value = [...messages.value, res]
+      messages.value = [...messages.value, res.data ?? res]
     } catch (e) {
       error.value = e
     }

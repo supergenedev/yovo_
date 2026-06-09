@@ -80,11 +80,39 @@ export const useCreatorStore = defineStore('creator', () => {
     }
   }
 
+  async function follow(creatorId) {
+    try {
+      const res = await apiFetch('/api/v/follows', {
+        method: 'POST',
+        body: { creator_user_id: creatorId },
+      })
+      // remove from recommended since it now excludes followed creators
+      recommended.value = recommended.value.filter((c) => String(c.id) !== String(creatorId))
+      // update discover list follow state
+      const dc = discover.value.find((c) => String(c.id) === String(creatorId))
+      if (dc?.interaction_with_me) dc.interaction_with_me.is_following = true
+      return res
+    } catch (e) {
+      console.error('follow error:', e)
+    }
+  }
+
+  async function unfollow(followId, creatorId) {
+    try {
+      await apiFetch(`/api/v/follows/${followId}`, { method: 'DELETE' })
+      const dc = discover.value.find((c) => String(c.id) === String(creatorId))
+      if (dc?.interaction_with_me) dc.interaction_with_me.is_following = false
+    } catch (e) {
+      console.error('unfollow error:', e)
+    }
+  }
+
   return {
     currentCreator, posts, recommended, discover,
     postsMeta, discoverMeta,
     creatorLoading, postsLoading, listLoading,
     hasMorePosts, hasMoreDiscover,
     fetchCreatorUser, fetchCreatorPosts, fetchRecommended, fetchDiscover, search,
+    follow, unfollow,
   }
 })

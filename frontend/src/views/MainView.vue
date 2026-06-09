@@ -1,10 +1,7 @@
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import {
-  Sidebar,
-  SidebarFollowRow,
-  SidebarGroup,
-  SidebarItem,
   Stack,
   Text,
   UserBlock,
@@ -34,13 +31,19 @@ import {
 } from '@/components'
 import { useFeedStore } from '@/stores/feed'
 import { useInteractionsStore } from '@/stores/interactions'
+import { useMeStore } from '@/stores/me'
 
+const router = useRouter()
+const route = useRoute()
 const feedStore = useFeedStore()
 const interactionsStore = useInteractionsStore()
+const meStore = useMeStore()
+const selectedMainTab = ref(0)
 
 onMounted(async () => {
   await feedStore.fetchFeed()
   interactionsStore.initFromPosts(feedStore.posts)
+  if (meStore.following.length === 0) meStore.fetchFollowing()
 })
 
 function mapPostToCard(post) {
@@ -104,74 +107,6 @@ function timeAgo(ms) {
     align="stretch"
     gap="lg"
   >
-    <!-- LEFT — SIDEBAR -->
-    <Sidebar
-      :style="{ height: '100%' }"
-      :collapsed="false"
-      collapsedWidth="64"
-      headerLogoImage="/workbench-assets/icons/logo-mpks329o.svg"
-      headerSymbolImage="/workbench-assets/icons/symbol-mpks329n.svg"
-      presentation="sidebar"
-      width="272px"
-      background="none"
-      :bordered="false"
-      radius="none"
-      brandMarkText="Y"
-      expandedBrandDisplay="symbol-logo"
-      height="100vh"
-    >
-      <SidebarGroup :style="{ height: 'fit-content' }">
-        <SidebarItem :emphasized="true" badgeVariant="subtle" icon="plus" label="작품 만들기" :active="false" />
-      </SidebarGroup>
-
-      <SidebarGroup>
-        <SidebarItem icon="house" label="홈" :active="true" />
-        <SidebarItem icon="video" label="VIDEO" :active="false" />
-        <SidebarItem icon="user-star" label="크리에이터" badgeStatus="info" badgeVariant="subtle" :active="false" />
-        <SidebarItem icon="messages-square" label="채팅" :active="false" />
-        <SidebarItem badge="12" icon="bell-dot" label="알림" :active="false" />
-        <SidebarItem icon="book-marked" label="라이브러리" :active="false" />
-      </SidebarGroup>
-
-      <SidebarGroup count="45" seeAllLabel="모두보기" label="팔로잉">
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/736x/ac/30/ad/ac30ad5b4d550027ff5be9fe95e3f196.jpg" size="sm" name="Hailey Luna" initials="HL" avatarTone="brand" status="live" tail="LIVE" tailStatus="live" tailVariant="plain" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/b9/45/02/b94502342dfd29c213a99bb1d93c151d.jpg" size="sm" name="NeoVoice" initials="NV" avatarTone="teal" tail="방송중" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/e8/df/8e/e8df8ee3fd256e1fa1b1714a59d03517.jpg" size="sm" name="코다 / Koda" initials="KO" avatarTone="amber" tail="작업중" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg" size="sm" name="Ren Morimoto" initials="RM" avatarTone="purple" tail="5분" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/736x/ac/30/ad/ac30ad5b4d550027ff5be9fe95e3f196.jpg" size="sm" name="aether.studio" initials="AT" avatarTone="coral" tail="3시간" as="button" />
-      </SidebarGroup>
-
-      <SidebarGroup :style="{ height: '100%' }" seeAllLabel="모두보기" count="13" label="후원 중인 채널">
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg" status="live" size="sm" name="Lumen-X" initials="LX" avatarTone="coral" tail="VIP" tailStatus="warning" tailVariant="subtle" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/e8/df/8e/e8df8ee3fd256e1fa1b1714a59d03517.jpg" size="sm" name="Monomer" initials="MO" avatarTone="teal" tail="멤버" tailStatus="neutral" tailVariant="subtle" as="button" />
-      </SidebarGroup>
-
-      <SidebarGroup label="프로필" seeAllIcon="chevron-right">
-        <UserBlock
-          action3Icon=""
-          action3Variant="ghost"
-          action2Icon=""
-          avatarSize="md"
-          avatarSrc="https://i.pinimg.com/736x/cb/12/b2/cb12b2f39982bf66734cd7e5a34eb891.jpg"
-          :style="{ width: '100%' }"
-          name="Munhee J"
-          meta="@munhee · 크리에이터"
-          initials="MJ"
-          avatarTone="purple"
-          :verified="true"
-          size="md"
-        >
-          <ButtonPopover leadingIcon="ellipsis" :iconOnly="true" trailingIcon="chevron-down" placement="top-end" buttonLabel="최신순" buttonShape="pill" buttonSize="sm" buttonVariant="ghost" :closeOnItemClick="true">
-            <PopoverList>
-              <PopoverItem icon="circle-user">프로필</PopoverItem>
-              <PopoverItem icon="layout-dashboard">대시보드</PopoverItem>
-              <PopoverItem icon="settings">설정</PopoverItem>
-            </PopoverList>
-          </ButtonPopover>
-        </UserBlock>
-      </SidebarGroup>
-    </Sidebar>
-
     <Stack align="center" :style="{ width: '100%', paddingTop: 'var(--ds-spacing-space-3)', overflow: 'hidden', height: '100%', flex: '1 1 auto', minWidth: '600px' }" direction="column" gap="none">
       <!-- Hero details -->
       <Stack :style="{ width: '100%', overflow: 'scroll', flex: '1 1 auto', height: 'fit-content' }" as="div" radius="md" direction="column" align="center" justify="start" gap="2xl" padding="none" background="none" mask="none" maskStart="45" maskEnd="100" maskAngle="0" glassBlur="18">
@@ -187,13 +122,13 @@ function timeAgo(ms) {
               size="md"
             />
             <TabsList label="Tabs">
-              <Tab :selected="true">맞춤추천</Tab>
-              <Tab :badge="true" badgeVariant="danger" badgeText="17" :selected="false">서포터 전용</Tab>
-              <Tab :badge="true" badgeVariant="danger" badgeText="48" :selected="false">구독중</Tab>
+              <Tab :selected="selectedMainTab === 0" @click="selectedMainTab = 0">맞춤추천</Tab>
+              <Tab :badge="true" badgeVariant="danger" badgeText="17" :selected="selectedMainTab === 1" @click="selectedMainTab = 1">서포터 전용</Tab>
+              <Tab :badge="true" badgeVariant="danger" badgeText="48" :selected="selectedMainTab === 2" @click="selectedMainTab = 2">구독중</Tab>
             </TabsList>
           </Stack>
 
-          <TabsPanel :selected="true">
+          <TabsPanel :selected="selectedMainTab === 0">
             <Stack as="div" radius="none" direction="column" align="stretch" justify="start" gap="lg" padding="none" background="none" mask="none" maskStart="45" maskEnd="100" maskAngle="0" glassBlur="18">
               <Stack :style="{ height: '100%', overflow: 'scroll' }" as="div" radius="none" direction="column" align="stretch" justify="start" gap="none" padding="none" background="none" mask="none" maskStart="45" maskEnd="100" maskAngle="0" glassBlur="18">
                 <Stack gap="none" :style="{ width: '100%', height: 'fit-content' }" paddingTop="var(--ds-spacing-space-8)" minWidth="0.5rem">
@@ -207,17 +142,18 @@ function timeAgo(ms) {
                     title="추천 크리에이터"
                     :wrapActions="false"
                   />
-                  <StoryStrip label="라이브 중인 크리에이터" scroll="auto">
-                    <Story avatarSrc="https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg" label="Hailey" initials="HL" badge="LIVE" state="unseen" avatarTone="brand" size="lg" />
-                    <Story avatarSrc="https://i.pinimg.com/736x/a8/37/8c/a8378cc951d79b9130952b0914f92ee6.jpg" label="NeoVoice" initials="NV" badge="LIVE" state="unseen" avatarTone="teal" size="lg" />
-                    <Story avatarSrc="https://i.pinimg.com/1200x/e8/df/8e/e8df8ee3fd256e1fa1b1714a59d03517.jpg" label="Ren M." initials="RM" badge="LIVE" state="unseen" avatarTone="purple" size="lg" />
-                    <Story badge="LIVE" avatarSrc="https://i.pinimg.com/1200x/b9/45/02/b94502342dfd29c213a99bb1d93c151d.jpg" label="Koda" initials="KO" state="unseen" avatarTone="amber" size="lg" />
-                    <Story badge="LIVE" avatarSrc="https://i.pinimg.com/1200x/e8/df/8e/e8df8ee3fd256e1fa1b1714a59d03517.jpg" label="aether" initials="AT" state="unseen" avatarTone="coral" size="lg" />
-                    <Story badge="LIVE" avatarSrc="https://i.pinimg.com/736x/c3/aa/31/c3aa3137039ac43eb565b0a4aa1acbd9.jpg" label="JIMIN" initials="JM" state="unseen" avatarTone="blue" size="lg" />
-                    <Story badge="LIVE" avatarSrc="https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg" label="Mika" initials="MK" state="unseen" avatarTone="green" size="lg" />
-                    <Story badge="LIVE" avatarSrc="https://i.pinimg.com/1200x/e8/df/8e/e8df8ee3fd256e1fa1b1714a59d03517.jpg" label="aether" initials="AT" state="unseen" avatarTone="coral" size="lg" />
-                    <Story badge="LIVE" avatarSrc="https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg" label="SOYU" initials="SY" state="unseen" avatarTone="pink" size="lg" />
-                    <Story badge="LIVE" avatarSrc="https://i.pinimg.com/736x/c3/aa/31/c3aa3137039ac43eb565b0a4aa1acbd9.jpg" label="Mika" initials="MK" state="unseen" avatarTone="green" size="lg" />
+                  <StoryStrip label="팔로우 중인 크리에이터" scroll="auto">
+                    <Story
+                      v-for="creator in meStore.following"
+                      :key="creator.id"
+                      :avatarSrc="creator.profile_image ?? undefined"
+                      :label="creator.nickname ?? ''"
+                      :initials="getInitials(creator.nickname)"
+                      state="unseen"
+                      avatarTone="brand"
+                      size="lg"
+                      @click="router.push('/creator/' + creator.id)"
+                    />
                   </StoryStrip>
                 </Stack>
 
@@ -302,6 +238,27 @@ function timeAgo(ms) {
                 <Stack justify="center" direction="row" width="100%" marginTop="12px">© 2026 YOVO</Stack>
               </Stack>
             </Stack>
+          </TabsPanel>
+          <TabsPanel :selected="selectedMainTab === 1">
+            <Stack align="center" justify="center" padding="2xl" direction="column" gap="md">
+              <Text tone="tertiary" variant="body-lg">서포터 전용 콘텐츠는 준비 중입니다.</Text>
+            </Stack>
+          </TabsPanel>
+          <TabsPanel :selected="selectedMainTab === 2">
+            <Stack v-if="feedStore.loading && feedStore.posts.length === 0" align="center" justify="center" padding="2xl">
+              <Text tone="tertiary">피드를 불러오는 중...</Text>
+            </Stack>
+            <Stack v-else-if="feedStore.posts.length === 0" align="center" justify="center" padding="2xl">
+              <Text tone="tertiary">구독 중인 크리에이터의 포스트가 없습니다.</Text>
+            </Stack>
+            <div
+              v-else
+              v-for="post in feedStore.posts"
+              :key="'sub-' + post.id"
+              :style="{ position: 'relative' }"
+            >
+              <PostCard v-bind="mapPostToCard(post)" />
+            </div>
           </TabsPanel>
         </Tabs>
       </Stack>

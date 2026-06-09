@@ -25,7 +25,7 @@ export const useAuthStore = defineStore('auth', () => {
       method: 'POST',
       body: { user: { email, password } },
     })
-    setAuthInfo({ id: res.id, token: res.token })
+    setAuthInfo({ id: res.user.id, token: res.user.access_token })
     return res
   }
 
@@ -34,7 +34,7 @@ export const useAuthStore = defineStore('auth', () => {
       method: 'POST',
       body: { user: { email, password, nickname } },
     })
-    setAuthInfo({ id: res.id, token: res.token })
+    setAuthInfo({ id: res.user.id, token: res.user.access_token })
     return res
   }
 

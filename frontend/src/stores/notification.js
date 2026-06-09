@@ -6,6 +6,7 @@ export const useNotificationStore = defineStore('notification', () => {
   const notifications = ref([])
   const meta = ref(null)
   const unreadCount = ref(0)
+  const tabCounts = ref({ total: 0, new_post: 0, replies: 0, yovo: 0 })
   const loading = ref(false)
 
   const hasMore = computed(() => meta.value?.next != null)
@@ -32,6 +33,15 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
+  async function fetchTabCounts() {
+    try {
+      const res = await apiFetch('/api/v/notifications/tab_counts')
+      tabCounts.value = res
+    } catch (e) {
+      console.error('fetchTabCounts error:', e)
+    }
+  }
+
   async function readAll() {
     try {
       await apiFetch('/api/v/notifications/read_all', { method: 'POST' })
@@ -55,5 +65,5 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
-  return { notifications, meta, unreadCount, loading, hasMore, fetchNotifications, fetchUnreadCount, readAll, markRead }
+  return { notifications, meta, unreadCount, tabCounts, loading, hasMore, fetchNotifications, fetchUnreadCount, fetchTabCounts, readAll, markRead }
 })

@@ -5,7 +5,9 @@ module Api
 
       def index
         chats = @chat_room.chats.order(created_at: :asc)
-        render json: chats, each_serializer: ChatSerializer, status: :ok
+        serialized = ActiveModelSerializers::SerializableResource.new(chats, each_serializer: ChatSerializer).as_json
+        data = serialized.is_a?(Hash) ? serialized.values.first : serialized
+        render json: { data: data }, status: :ok
       end
 
       def create
@@ -17,7 +19,9 @@ module Api
           content_price: params[:content_price] || 0,
           message_type: "dm"
         )
-        render json: chat, serializer: ChatSerializer, status: :created
+        serialized = ActiveModelSerializers::SerializableResource.new(chat, serializer: ChatSerializer).as_json
+        data = serialized.is_a?(Hash) ? serialized.values.first : serialized
+        render json: { data: data }, status: :created
       end
 
       private

@@ -1,9 +1,5 @@
 <script setup>
 import {
-  Sidebar,
-  SidebarGroup,
-  SidebarItem,
-  SidebarFollowRow,
   UserBlock,
   Stack,
   SectionTitle,
@@ -26,76 +22,33 @@ import {
   Tab,
   Media,
 } from '@/components'
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useCreatorStore } from '@/stores/creator'
 
+const router = useRouter()
 const creatorStore = useCreatorStore()
+const searchQuery = ref('')
+let searchTimer = null
 
 onMounted(() => {
   creatorStore.fetchRecommended()
+  creatorStore.fetchDiscover()
 })
+
+function onSearch(e) {
+  const q = e.target?.value ?? ''
+  searchQuery.value = q
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    if (q.trim()) creatorStore.search(q.trim())
+    else creatorStore.fetchDiscover()
+  }, 300)
+}
 </script>
 
 <template>
-  <!-- Sidebar — reused from Video-Main, 크리에이터 active -->
   <Stack as="div" radius="none" direction="row" align="stretch" justify="start" gap="lg" padding="none" background="none" mask="none" maskStart="45" maskEnd="100" maskAngle="0" glassBlur="18">
-    <Sidebar
-      :style="{ width: '272px' }"
-      :collapsed="false"
-      collapsedWidth="64"
-      headerLogoImage="/workbench-assets/icons/logo-mpks329o.svg"
-      headerSymbolImage="/workbench-assets/icons/symbol-mpks329n.svg"
-      presentation="sidebar"
-      background="none"
-      :bordered="false"
-      radius="none"
-      brandMarkText="Y"
-      brandName="YOVO"
-      expandedBrandDisplay="symbol-logo"
-      activeItem="creator"
-      height="100vh"
-      width="272px"
-    >
-      <SidebarGroup :style="{ height: 'fit-content' }">
-        <SidebarItem :emphasized="true" badgeVariant="subtle" icon="plus" label="작품 만들기" :active="false" />
-      </SidebarGroup>
-      <SidebarGroup>
-        <SidebarItem icon="house" label="홈" :active="false" />
-        <SidebarItem icon="video" label="VIDEO" :active="false" />
-        <SidebarItem icon="user-star" label="크리에이터" badgeStatus="info" badgeVariant="subtle" :active="true" />
-        <SidebarItem icon="messages-square" label="채팅" :active="false" />
-        <SidebarItem badge="12" icon="bell-dot" label="알림" :active="false" />
-        <SidebarItem icon="book-marked" label="라이브러리" :active="false" />
-      </SidebarGroup>
-
-      <SidebarGroup count="45" seeAllLabel="모두보기" label="팔로잉">
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/736x/ac/30/ad/ac30ad5b4d550027ff5be9fe95e3f196.jpg" size="sm" name="Hailey Luna" initials="HL" avatarTone="brand" status="live" tail="LIVE" tailStatus="live" tailVariant="plain" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/b9/45/02/b94502342dfd29c213a99bb1d93c151d.jpg" size="sm" name="NeoVoice" initials="NV" avatarTone="teal" tail="방송중" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/e8/df/8e/e8df8ee3fd256e1fa1b1714a59d03517.jpg" size="sm" name="코다 / Koda" initials="KO" avatarTone="amber" tail="작업중" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg" size="sm" name="Ren Morimoto" initials="RM" avatarTone="purple" tail="5분" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/736x/ac/30/ad/ac30ad5b4d550027ff5be9fe95e3f196.jpg" size="sm" name="aether.studio" initials="AT" avatarTone="coral" tail="3시간" as="button" />
-      </SidebarGroup>
-
-      <SidebarGroup :style="{ height: '100%' }" seeAllLabel="모두보기" count="13" label="후원 중인 채널">
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg" status="live" size="sm" name="Lumen-X" initials="LX" avatarTone="coral" tail="VIP" tailStatus="warning" tailVariant="subtle" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/e8/df/8e/e8df8ee3fd256e1fa1b1714a59d03517.jpg" size="sm" name="Monomer" initials="MO" avatarTone="teal" tail="멤버" tailStatus="neutral" tailVariant="subtle" as="button" />
-      </SidebarGroup>
-
-      <SidebarGroup label="프로필" seeAllIcon="chevron-right">
-        <UserBlock
-          avatarSize="lg"
-          avatarSrc="https://i.pinimg.com/736x/cb/12/b2/cb12b2f39982bf66734cd7e5a34eb891.jpg"
-          :style="{ width: '100%' }"
-          name="Munhee J"
-          meta="@munhee · 크리에이터"
-          initials="MJ"
-          avatarTone="purple"
-          :verified="true"
-          size="md"
-        />
-      </SidebarGroup>
-    </Sidebar>
-
     <Stack :style="{ width: '100%', overflow: 'scroll', height: '100%' }" as="div" direction="column" align="center" justify="start" gap="lg" padding="none">
       <Stack
         :style="{ minWidth: '800px' }"
@@ -113,7 +66,7 @@ onMounted(() => {
         <!-- Header: title + search -->
         <SectionTitle :style="{ width: '100%', maxWidth: '1400px' }" title="크리에이터 탐색" icon="user-star" as="header" align="center" iconTone="brand" :showIcon="false" titleAs="h1" titleVariant="heading-1" titleWeight="bold" :wrapActions="true">
           <SectionTitleGroup :style="{ flex: '0 1 auto', maxWidth: 'var(--ds-spacing-dialog-max-width-sm)', width: '100%' }" align="end">
-            <Input :style="{ width: '100%' }" shape="pill" :clearable="true" labelPosition="outside" type="search" placeholder="크리에이터, 태그 검색…" leadingIcon="search" size="md" />
+            <Input :style="{ width: '100%' }" shape="pill" :clearable="true" labelPosition="outside" type="search" placeholder="크리에이터, 태그 검색…" leadingIcon="search" size="md" :value="searchQuery" @input="onSearch" />
           </SectionTitleGroup>
         </SectionTitle>
 
@@ -216,14 +169,14 @@ onMounted(() => {
           </SectionTitle>
 
           <!-- 로딩 -->
-          <Text v-if="creatorStore.loading && creatorStore.recommended.length === 0" tone="tertiary">불러오는 중...</Text>
+          <Text v-if="creatorStore.listLoading && creatorStore.recommended.length === 0" tone="tertiary">불러오는 중...</Text>
 
           <!-- 빈 상태 -->
-          <Text v-else-if="!creatorStore.loading && creatorStore.recommended.length === 0" tone="tertiary">추천 크리에이터가 없습니다.</Text>
+          <Text v-else-if="!creatorStore.listLoading && creatorStore.recommended.length === 0" tone="tertiary">추천 크리에이터가 없습니다.</Text>
 
           <!-- 크리에이터 목록 -->
           <CardGrid v-else :count="creatorStore.recommended.length" itemSize="custom" itemSizeOverride="200px" layout="row" gap="sm" :arrows="false" edgeFade="fade" scroll="snap">
-            <Card v-for="creator in creatorStore.recommended" :key="creator.id" variant="outline" padding="lg">
+            <Card v-for="creator in creatorStore.recommended" :key="creator.id" variant="outline" padding="lg" :style="{ cursor: 'pointer' }" @click="router.push('/creator/' + creator.id)">
               <Stack direction="column" align="center" gap="md">
                 <Stack as="div" radius="none" direction="column" align="center" justify="start" gap="xxs" padding="none" background="none">
                   <Avatar
@@ -241,7 +194,14 @@ onMounted(() => {
                 <Stack v-if="creator.tags && creator.tags.length" direction="row" gap="xxs" :wrap="true" justify="center">
                   <Badge v-for="tag in creator.tags.slice(0, 2)" :key="tag" status="neutral" variant="subtle" size="sm" shape="pill">{{ tag }}</Badge>
                 </Stack>
-                <Button :style="{ width: '100%' }" variant="soft" size="sm" shape="pill" leadingIcon="plus">팔로우</Button>
+                <Button
+                  :style="{ width: '100%' }"
+                  :variant="creator.interaction_with_me?.is_following ? 'primary' : 'soft'"
+                  size="sm"
+                  shape="pill"
+                  :leadingIcon="creator.interaction_with_me?.is_following ? 'check' : 'plus'"
+                  @click.stop="creatorStore.follow(creator.id)"
+                >{{ creator.interaction_with_me?.is_following ? '팔로잉' : '팔로우' }}</Button>
               </Stack>
             </Card>
           </CardGrid>
@@ -481,39 +441,72 @@ onMounted(() => {
             </TabsList>
           </Tabs>
 
+          <Text v-if="creatorStore.listLoading && creatorStore.discover.length === 0" tone="tertiary">불러오는 중...</Text>
+          <Text v-else-if="!creatorStore.listLoading && creatorStore.discover.length === 0" tone="tertiary">검색 결과가 없습니다.</Text>
+
           <!-- Creator cards grid -->
-          <CardGrid cols="4" count="8" itemSize="custom" itemSizeOverride="300px" layout="grid" gap="sm" :arrows="false" edgeFade="visible" scroll="snap">
-            <!-- RINA -->
-            <Card variant="solid" padding="none" gap="none">
-              <Stack :style="{ height: '160px', backgroundImage: 'url(https://i.pinimg.com/1200x/ab/5b/0c/ab5b0cd28321dfb14b3e0311c3616207.jpg)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundBlendMode: 'normal' }" radius="none" direction="row" align="end" justify="start" padding="md" position="relative">
-                <Avatar src="https://i.pinimg.com/736x/3e/36/00/3e3600f33f0c190104d30d2a971e1659.jpg" initials="R" size="lg" shape="circle" tone="pink" alt="RINA" />
+          <CardGrid v-else :cols="4" :count="creatorStore.discover.length" itemSize="custom" itemSizeOverride="300px" layout="grid" gap="sm" :arrows="false" edgeFade="visible" scroll="snap">
+            <Card
+              v-for="creator in creatorStore.discover"
+              :key="creator.id"
+              variant="solid"
+              padding="none"
+              gap="none"
+              :style="{ cursor: 'pointer' }"
+              @click="router.push('/creator/' + creator.id)"
+            >
+              <Stack
+                :style="{
+                  height: '160px',
+                  background: creator.background_color ?? 'linear-gradient(135deg,#1e1b4b,#4c1d95)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }"
+                radius="none"
+                direction="row"
+                align="end"
+                justify="start"
+                padding="md"
+              >
+                <Avatar
+                  :src="creator.profile_image ?? undefined"
+                  :initials="(creator.nickname ?? '?').slice(0, 2).toUpperCase()"
+                  size="lg"
+                  shape="circle"
+                  tone="brand"
+                  :alt="creator.nickname"
+                />
               </Stack>
               <Stack direction="column" gap="sm" padding="md">
-                <Stack as="div" radius="none" direction="column" align="stretch" justify="start" gap="none" padding="none" background="none" mask="none" maskStart="45" maskEnd="100" maskAngle="0" glassBlur="18">
+                <Stack direction="column" gap="none">
                   <Stack direction="row" align="center" gap="xxs">
-                    <Text as="h6" variant="heading-6" weight="semibold">RINA</Text>
-                    <Icon name="badge-check" size="16" />
+                    <Text as="h6" variant="heading-6" weight="semibold">{{ creator.nickname }}</Text>
+                    <Icon v-if="creator.creator_type === 'official'" name="badge-check" size="16" />
                   </Stack>
-                  <Text as="p" variant="caption" tone="tertiary">@rina_voice</Text>
+                  <Text v-if="creator.username" as="p" variant="caption" tone="tertiary">@{{ creator.username }}</Text>
                 </Stack>
-                <Text as="p" variant="body" tone="secondary" :truncate="true" truncateLines="2">당신의 밤을 채우는 보이스 드라마</Text>
-                <Stack direction="row" align="center" gap="xxs" :wrap="false">
-                  <Chip size="sm">#보이스드라마</Chip>
-                  <Chip size="sm">#감성</Chip>
-                  <Chip size="sm">#일상연기</Chip>
+                <Text v-if="creator.introduction" as="p" variant="body" tone="secondary" :truncate="true" truncateLines="2">{{ creator.introduction }}</Text>
+                <Stack v-if="creator.tags?.length" direction="row" align="center" gap="xxs" :wrap="false">
+                  <Chip v-for="tag in creator.tags.slice(0, 3)" :key="tag" size="sm">#{{ tag }}</Chip>
                 </Stack>
                 <Stack direction="row" align="center" justify="between" gap="sm">
                   <Stack direction="row" align="center" gap="md" width="auto">
                     <Stack direction="column" gap="none" width="auto">
-                      <Text as="span" variant="body" weight="bold">184K</Text>
+                      <Text as="span" variant="body" weight="bold">{{ (creator.followers_count ?? 0).toLocaleString() }}</Text>
                       <Text as="span" variant="caption" tone="tertiary">팔로워</Text>
                     </Stack>
                     <Stack direction="column" gap="none" width="auto">
-                      <Text as="span" variant="body" weight="bold">248</Text>
+                      <Text as="span" variant="body" weight="bold">{{ (creator.posts_count ?? 0).toLocaleString() }}</Text>
                       <Text as="span" variant="caption" tone="tertiary">작품</Text>
                     </Stack>
                   </Stack>
-                  <Button variant="secondary" size="sm" shape="pill" leadingIcon="plus">팔로우</Button>
+                  <Button
+                    :variant="creator.interaction_with_me?.is_following ? 'primary' : 'secondary'"
+                    size="sm"
+                    shape="pill"
+                    :leadingIcon="creator.interaction_with_me?.is_following ? 'check' : 'plus'"
+                    @click.stop="creatorStore.follow(creator.id)"
+                  >{{ creator.interaction_with_me?.is_following ? '팔로잉' : '팔로우' }}</Button>
                 </Stack>
               </Stack>
             </Card>

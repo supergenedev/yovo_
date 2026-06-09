@@ -47,6 +47,7 @@ Rails.application.routes.draw do
       resources :follows, only: %i[create destroy] do
         collection do
           get :recommend
+          get :following
         end
       end
       resources :posts, only: %i[show] do
@@ -92,6 +93,7 @@ Rails.application.routes.draw do
       resources :notifications, only: %i[index update] do
         collection do
           get :unread_count
+          get :tab_counts
           post :read_all
         end
       end

@@ -17,6 +17,7 @@ const props = defineProps({
   label: { default: undefined },
   labelPosition: { default: 'outside' },
   leadingIcon: { default: undefined },
+  modelValue: { default: '' },
   onClear: { default: undefined },
   readOnly: { default: undefined },
   shape: { default: 'default' },
@@ -26,6 +27,8 @@ const props = defineProps({
   trailingIcon: { default: undefined },
   type: { default: 'text' },
 })
+
+const emit = defineEmits(['update:modelValue'])
 
 const generatedId = useId()
 const inputId = computed(() => props.id ?? generatedId)
@@ -118,6 +121,8 @@ const inputAttrs = computed(() => {
         :aria-disabled="props.disabled || undefined"
         :aria-describedby="descriptionId"
         :readonly="props.readOnly"
+        :value="props.modelValue"
+        @input="emit('update:modelValue', $event.target.value)"
       />
       <span v-if="hasTrailingIcon" class="input-icon input-icon-trailing" aria-hidden="true">
         <slot name="trailingIcon">
@@ -155,6 +160,8 @@ const inputAttrs = computed(() => {
       :aria-disabled="props.disabled || undefined"
       :aria-describedby="descriptionId"
       :readonly="props.readOnly"
+      :value="props.modelValue"
+      @input="emit('update:modelValue', $event.target.value)"
     />
 
     <span v-if="props.description" class="input-description" :id="descriptionId">{{ props.description }}</span>
@@ -229,5 +236,7 @@ const inputAttrs = computed(() => {
     :aria-disabled="props.disabled || undefined"
     :aria-describedby="descriptionId"
     :readonly="props.readOnly"
+    :value="props.modelValue"
+    @input="emit('update:modelValue', $event.target.value)"
   />
 </template>

@@ -1,36 +1,26 @@
 module Api
   module Users
-    class RegistrationsController < Devise::RegistrationsController
-      skip_before_action :verify_authenticity_token
-
+    class RegistrationsController < ::ApplicationController
       def create
-        super do |resource|
-          unless resource.persisted?
-            return render json: {
-              code: 422, type: "error",
-              message: resource.errors.full_messages.join(", ")
-            }, status: :unprocessable_entity
-          end
-        end
-      end
+        user = User.new(sign_up_params)
 
-      def respond_with(_current_user, _opts = {})
-        if resource.persisted?
-          access_token = "Bearer #{request.env['warden-jwt_auth.token']}"
-          render json: resource, serializer: Api::V::UserSerializer, status: :created, access_token: access_token
-        else
-          render json: {
-            code: 422, message: resource.errors.full_messages.join(", "),
-            type: "error", title: nil
+        unless user.save
+          return render json: {
+            code: 422, type: "error",
+            message: user.errors.full_messages.join(", ")
           }, status: :unprocessable_entity
         end
+
+        token, payload = Warden::JWTAuth::UserEncoder.new.call(user, :user, nil)
+        user.on_jwt_dispatch(token, payload)
+        render json: user, serializer: Api::V::UserSerializer, status: :created, access_token: token
       end
 
-      protected
+      private
 
       def sign_up_params
-        params.permit(:email, :password, :nickname).merge(
-          password_confirmation: params[:password]
+        params.require(:user).permit(:email, :password, :nickname).merge(
+          password_confirmation: params.dig(:user, :password)
         )
       end
     end

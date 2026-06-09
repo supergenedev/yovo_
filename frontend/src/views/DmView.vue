@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Stack, Text, Input, Button, UserBlock, Badge } from '@/components'
+import { Stack, Text, Input, Button, Avatar, Badge } from '@/components'
 import { useDmStore } from '@/stores/dm'
 import { useAuthStore } from '@/stores/auth'
 
@@ -46,7 +46,7 @@ function isMine(chat) {
   <Stack
     direction="row"
     align="stretch"
-    :style="{ width: '100%', height: '100vh', overflow: 'hidden' }"
+    :style="{ width: '100%', height: '100%', overflow: 'hidden' }"
   >
     <!-- LEFT: Chat room list -->
     <Stack
@@ -117,25 +117,32 @@ function isMine(chat) {
           }"
           @click="handleSelectRoom(room)"
         >
-          <Stack direction="row" align="center" gap="sm" :style="{ flex: '1 1 auto', minWidth: 0 }">
-            <UserBlock
-              :name="room.creator_user?.nickname ?? '알 수 없음'"
-              :avatar-src="room.creator_user?.profile_image ?? undefined"
-              :initials="(room.creator_user?.nickname ?? 'UN').slice(0, 2).toUpperCase()"
-              avatar-tone="brand"
-              avatar-size="sm"
+          <Avatar
+            :src="room.creator_user?.profile_image ?? undefined"
+            :initials="(room.creator_user?.nickname ?? 'UN').slice(0, 2).toUpperCase()"
+            tone="brand"
+            size="sm"
+            shape="circle"
+            :alt="room.creator_user?.nickname ?? ''"
+            :style="{ flex: '0 0 auto' }"
+          />
+          <Stack direction="column" gap="none" :style="{ flex: '1 1 auto', minWidth: 0 }">
+            <Text variant="body-sm" weight="semibold" :truncate="true" truncateLines="1">
+              {{ room.creator_user?.nickname ?? '알 수 없음' }}
+            </Text>
+            <Text v-if="room.last_message" variant="body-xs" tone="tertiary" :truncate="true" truncateLines="1">
+              {{ room.last_message }}
+            </Text>
+          </Stack>
+          <Stack direction="column" align="end" gap="xs" :style="{ flex: '0 0 auto' }">
+            <Text variant="body-xs" tone="tertiary">{{ formatTime(room.last_messaged_at) }}</Text>
+            <Badge
+              v-if="room.unread_count > 0"
+              status="danger"
+              variant="subtle"
               size="sm"
-              :meta="room.last_message ? (room.last_message.length > 30 ? room.last_message.slice(0, 30) + '…' : room.last_message) : ''"
-              :style="{ flex: '1 1 auto', minWidth: 0 }"
-            />
-            <Stack direction="column" align="end" gap="xs" :style="{ flex: '0 0 auto' }">
-              <Text variant="body-xs" tone="tertiary">{{ formatTime(room.last_messaged_at) }}</Text>
-              <Badge
-                v-if="room.unread_count > 0"
-                variant="danger"
-                :label="String(room.unread_count)"
-              />
-            </Stack>
+              shape="pill"
+            >{{ room.unread_count }}</Badge>
           </Stack>
         </button>
       </Stack>

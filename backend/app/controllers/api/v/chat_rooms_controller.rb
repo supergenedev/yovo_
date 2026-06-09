@@ -5,7 +5,9 @@ module Api
 
       def index
         chat_rooms = current_user.chat_rooms.includes(:creator_user, :chats)
-        render json: chat_rooms, each_serializer: ChatRoomSerializer, scope: current_user, status: :ok
+        serialized = ActiveModelSerializers::SerializableResource.new(chat_rooms, each_serializer: ChatRoomSerializer, scope: current_user).as_json
+        data = serialized.is_a?(Hash) ? serialized.values.first : serialized
+        render json: { data: data }, status: :ok
       end
 
       def show

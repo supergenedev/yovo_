@@ -11,10 +11,6 @@ import {
   Chip,
   Comment,
   Divider,
-  Sidebar,
-  SidebarFollowRow,
-  SidebarGroup,
-  SidebarItem,
   Stack,
   Stat,
   StatList,
@@ -30,11 +26,75 @@ import {
   SectionTitle,
   ToolbarGroup,
   CommentInput,
-  SidebarFooter,
   Link,
   TopicRow,
   PostListItem,
 } from '@/components'
+import { onMounted, computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useVideoStore } from '@/stores/video'
+import { useCreatorStore } from '@/stores/creator'
+import { apiFetch } from '@/utils/api/apiFetch'
+
+const route = useRoute()
+const router = useRouter()
+const videoStore = useVideoStore()
+const creatorStore = useCreatorStore()
+
+const post = computed(() => videoStore.currentPost)
+const liked = computed(() => post.value?.interaction_with_me?.liked ?? false)
+const bookmarked = computed(() => post.value?.interaction_with_me?.bookmarked ?? false)
+
+const creatorPosts = ref([])
+const comments = ref([])
+const commentsLoading = ref(false)
+
+onMounted(async () => {
+  await videoStore.fetchPost(route.params.id)
+  fetchComments()
+  creatorStore.fetchDiscover()
+  if (!videoStore.posts.length) videoStore.fetchVideoPosts()
+})
+
+watch(post, (val) => {
+  if (val?.creator_user?.id) {
+    apiFetch(`/api/v/creator_users/${val.creator_user.id}/posts`, { query: { limit: 8 } })
+      .then(res => { creatorPosts.value = (res.data ?? []).filter(p => String(p.id) !== String(route.params.id)) })
+      .catch(() => {})
+  }
+}, { immediate: false })
+
+async function fetchComments() {
+  commentsLoading.value = true
+  try {
+    const res = await apiFetch(`/api/v/posts/${route.params.id}/post_comments`)
+    comments.value = res.post_comments ?? res.data ?? []
+  } catch (e) {
+    comments.value = []
+  } finally {
+    commentsLoading.value = false
+  }
+}
+
+function toggleLike() {
+  if (liked.value) videoStore.unlikePost(route.params.id)
+  else videoStore.likePost(route.params.id)
+}
+
+function toggleBookmark() {
+  if (bookmarked.value) videoStore.unbookmarkPost(route.params.id)
+  else videoStore.bookmarkPost(route.params.id)
+}
+
+function timeAgo(ms) {
+  if (!ms) return ''
+  const diff = Date.now() - ms
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return '방금 전'
+  if (mins < 60) return `${mins}분 전`
+  const hours = Math.floor(mins / 60)
+  return hours < 24 ? `${hours}시간 전` : `${Math.floor(hours / 24)}일 전`
+}
 </script>
 
 <template>
@@ -45,84 +105,6 @@ import {
     align="stretch"
     gap="lg"
   >
-    <!-- LEFT — SIDEBAR -->
-    <Sidebar
-      :style="{ width: '72px' }"
-      :collapsed="false"
-      collapsedWidth="72"
-      headerLogoImage="/workbench-assets/icons/logo-mpks329o.svg"
-      headerSymbolImage="/workbench-assets/icons/symbol-mpks329n.svg"
-      presentation="sidebar"
-      width="md"
-      background="none"
-      :bordered="false"
-      radius="none"
-      brandMarkText="Y"
-      expandedBrandDisplay="symbol-logo"
-      height="100vh"
-    >
-      <SidebarGroup seeAllIcon="chevron-right">
-        <UserCard name="Hailey Luna" initials="HL" meta="Creator · live now" variant="outline" tint="sunken">
-          <UserCardHead>
-            <UserBlock
-              action3Icon=""
-              action3Variant="ghost"
-              action2Icon=""
-              avatarSize="sm"
-              avatarSrc="https://i.pinimg.com/736x/cb/12/b2/cb12b2f39982bf66734cd7e5a34eb891.jpg"
-              :style="{ width: '100%' }"
-              name="Munhee J"
-              meta="@munhee · 크리에이터"
-              initials="MJ"
-              avatarTone="purple"
-              :verified="true"
-              size="md"
-            >
-              <ButtonPopover
-                :style="{ width: '32px' }"
-                leadingIcon="ellipsis"
-                :iconOnly="true"
-                trailingIcon="chevron-down"
-                placement="bottom-start"
-                buttonLabel="최신순"
-                buttonShape="pill"
-                buttonSize="sm"
-                buttonVariant="ghost"
-                :closeOnItemClick="true"
-              >
-                <PopoverList>
-                  <PopoverItem icon="circle-user">프로필</PopoverItem>
-                  <PopoverItem icon="layout-dashboard">대시보드</PopoverItem>
-                  <PopoverItem icon="settings">설정</PopoverItem>
-                </PopoverList>
-              </ButtonPopover>
-            </UserBlock>
-          </UserCardHead>
-        </UserCard>
-      </SidebarGroup>
-
-      <SidebarGroup seeAllIcon="chevron-right">
-        <SidebarItem :emphasized="false" badgeVariant="subtle" icon="plus" label="작품 만들기" :active="false" />
-      </SidebarGroup>
-
-      <SidebarGroup>
-        <SidebarItem icon="house" label="홈" :active="false" />
-        <SidebarItem icon="layout-grid" label="작품" :active="true" />
-        <SidebarItem icon="book-marked" label="구매목록" :active="false" />
-        <SidebarItem badge="12" icon="bell-dot" label="알림" :active="false" />
-      </SidebarGroup>
-
-      <SidebarGroup count="45" seeAllLabel="모두보기" label="팔로잉">
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/736x/ac/30/ad/ac30ad5b4d550027ff5be9fe95e3f196.jpg" size="sm" name="Hailey Luna" initials="HL" avatarTone="brand" status="live" tail="LIVE" tailStatus="live" tailVariant="plain" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/b9/45/02/b94502342dfd29c213a99bb1d93c151d.jpg" size="sm" name="NeoVoice" initials="NV" avatarTone="teal" tail="방송중" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/e8/df/8e/e8df8ee3fd256e1fa1b1714a59d03517.jpg" size="sm" name="코다 / Koda" initials="KO" avatarTone="amber" tail="작업중" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg" size="sm" name="Ren Morimoto" initials="RM" avatarTone="purple" tail="5분" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/736x/ac/30/ad/ac30ad5b4d550027ff5be9fe95e3f196.jpg" size="sm" name="aether.studio" initials="AT" avatarTone="coral" tail="3시간" as="button" />
-      </SidebarGroup>
-
-      <SidebarFooter primaryLabel="다크모드" primaryIcon="moon" secondaryLabel="설정" secondaryIcon="settings" />
-    </Sidebar>
-
     <Stack
       justify="start"
       :scrollFade="false"
@@ -152,7 +134,7 @@ import {
           gap="md"
           :wrap="false"
         >
-          <Button shape="pill" variant="soft" size="md" leadingIcon="arrow-left" iconOnly aria-label="Video — view" />
+          <Button shape="pill" variant="soft" size="md" leadingIcon="arrow-left" iconOnly aria-label="뒤로" @click="router.go(-1)" />
           <Stack flex="1 1 auto" direction="column" gap="xs">
             <Breadcrumb size="sm" separator="chevron">
               <BreadcrumbItem :style="{ height: '16px' }">
@@ -162,7 +144,7 @@ import {
                 <BreadcrumbLink href="#">보이스 · ASMR</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbItem>
-                <BreadcrumbCurrent>잠 못 드는 밤, 너의 옆에서 속삭이는 3시간 ASMR</BreadcrumbCurrent>
+                <BreadcrumbCurrent>{{ post?.title_ko ?? '작품 상세' }}</BreadcrumbCurrent>
               </BreadcrumbItem>
             </Breadcrumb>
           </Stack>
@@ -194,6 +176,7 @@ import {
           >
             <Stack as="div" radius="none" direction="column" align="stretch" justify="start" gap="xs" padding="none" background="none">
               <Alert
+                v-if="post?.view_type === 'buyer_only' && !post?.interaction_with_me?.seen"
                 :style="{ width: '100%' }"
                 action1Variant="primary"
                 action1Label="구매하기"
@@ -203,21 +186,19 @@ import {
                 variant="flat"
                 icon="lock"
                 title="전체 재생은 구매 후 가능해요"
-                message="미리듣기 00:30 · 전체 03:00:00"
+                :message="post?.content_price ? `가격: ⓒ ${post.content_price}` : ''"
               />
               <PostListItem
-                mediaProgress="40"
-                mediaBadgeText="Suppoter's Only"
-                mediaSrc="https://i.pinimg.com/736x/64/35/1b/64351bf5a15fdc1674758340556a1967.jpg"
-                avatarSrc="https://i.pinimg.com/736x/64/35/1b/64351bf5a15fdc1674758340556a1967.jpg"
+                :mediaSrc="post?.locked_thumbnail_url ?? undefined"
+                :avatarSrc="post?.creator_user?.profile_image ?? undefined"
                 :style="{ width: '100%' }"
-                title="새벽이 떠오를 때 — 2인 콜라보 단편"
-                initials="KO"
-                meta="코다 / Koda · 1주 전"
-                avatarAlt="코다 / Koda"
+                :title="post?.title_ko ?? ''"
+                :initials="(post?.creator_user?.nickname ?? '?')[0]"
+                :meta="post?.creator_user?.nickname ?? ''"
+                :avatarAlt="post?.creator_user?.nickname ?? ''"
                 :showAvatar="true"
                 variant="vertical"
-                avatarTone="amber"
+                avatarTone="brand"
                 size="lg"
                 avatarSize="sm"
                 avatarShape="circle"
@@ -225,8 +206,6 @@ import {
                 mediaBackground="linear-gradient(140deg, #0c1429 0%, #4c1d95 50%, #be185d 100%)"
                 mediaBadgeStatus="info"
                 mediaBadgeVariant="solid"
-                mediaDuration="12:48"
-                mediaLiveLabel="LIVE"
                 mediaLockActionShape="pill"
                 mediaLockActionSize="sm"
                 mediaLockActionVariant="primary"
@@ -242,13 +221,11 @@ import {
                 <Stack direction="column" gap="none">
                   <Stack direction="row" align="center" gap="md" :wrap="false">
                     <StatList :brandStat="true" :style="{ width: '100%', flex: '0 0 auto' }" size="md">
-                      <Stat icon="heart" value="1,234" label="좋아요" />
-                      <Stat icon="message-circle" value="89" label="댓글" />
-                      <Stat icon="eye" value="12.5K" label="조회" />
-                      <Stat icon="share-2" value="312" label="공유" />
+                      <Stat icon="heart" :value="String(post?.likes_count ?? 0)" label="좋아요" />
+                      <Stat icon="message-circle" :value="String(post?.comments_count ?? 0)" label="댓글" />
                       <ToolbarGroup align="end">
-                        <Button shape="pill" variant="ghost" size="md" leadingIcon="share2" iconOnly aria-label="저장" />
-                        <Button shape="pill" variant="ghost" size="md" leadingIcon="bookmark" iconOnly aria-label="저장" />
+                        <Button shape="pill" :variant="liked ? 'primary' : 'ghost'" size="md" leadingIcon="heart" iconOnly aria-label="좋아요" @click="toggleLike" />
+                        <Button shape="pill" :variant="bookmarked ? 'primary' : 'ghost'" size="md" leadingIcon="bookmark" iconOnly aria-label="저장" @click="toggleBookmark" />
                         <ButtonPopover
                           leadingIcon="ellipsis"
                           :iconOnly="true"
@@ -287,7 +264,7 @@ import {
               <Stack as="div" radius="none" direction="column" align="stretch" justify="start" gap="sm" padding="none" background="none">
                 <Stack as="section" direction="column" gap="sm">
                   <Text as="p" variant="body" tone="secondary" :style="{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }">
-                    잠 못 드는 밤, 옆에서 다정히 속삭여 드릴게요. 단단한 위스퍼 보이스와 가벼운 ear-blowing, 페이지 넘기는 소리, 빗소리 레이어를 90분간 이어가는 풀버전입니다. 헤드폰 사용을 권장합니다. 챕터별로 분리되어 있어 듣고 싶은 부분부터 골라 들을 수 있어요.
+                    {{ post?.body_ko ?? '' }}
                   </Text>
                   <Stack align="center" justify="start" direction="row" gap="xs" :wrap="true">
                     <Chip icon="" tone="brand" variant="default">19+</Chip>
@@ -336,7 +313,7 @@ import {
               <Stack :style="{ height: 'fit-content' }" as="section" direction="column" gap="md">
                 <Stack direction="row" align="center" gap="sm">
                   <Text as="h3" variant="heading-3" weight="bold" :style="{ flex: 1 }">댓글&#32;
-                    <Text as="span" variant="heading-3" weight="bold" tone="tertiary">89</Text>
+                    <Text as="span" variant="heading-3" weight="bold" tone="tertiary">{{ post?.comments_count ?? 0 }}</Text>
                   </Text>
                   <Button variant="ghost" size="sm" trailingIcon="chevron-right">전체보기</Button>
                 </Stack>
@@ -368,20 +345,30 @@ import {
                     :showEmoji="true"
                     submitLabel="등록"
                   />
-                  <Divider />
-                  <Comment author="user_a" avatarTone="pink" initials="U" time="2시간 전" body="정말 좋아요! 헤드폰으로 들었는데 진짜 옆에 있는 것 같아서 깜짝 놀랐어요." :likeCount="12" :replyCount="2" />
-                  <Divider />
-                  <Comment :pinned="false" :liked="true" :verified="true" avatarSrc="https://i.pinimg.com/1200x/d8/3e/d0/d83ed058e35a1b8fa43b8ffd4bf99bca.jpg" author="_mintly" avatarTone="teal" initials="M" time="5시간 전" body="챕터 3의 빗소리 레이어가 진짜 인생이에요. 다음 작품도 기대됩니다." :likeCount="5" :replyCount="0" />
-                  <Divider />
-                  <Comment :style="{ height: 'fit-content' }" author="sora_99" avatarTone="amber" initials="S" time="어제" body="수면용으로 자주 듣고 있어요. 오늘도 잘 자고 갑니다." :likeCount="8" :replyCount="1" />
-                  <Button variant="ghost" size="sm" trailingIcon="chevron-down">더보기</Button>
+                  <Text v-if="commentsLoading" tone="tertiary" variant="body-sm">불러오는 중...</Text>
+                  <template v-else-if="comments.length > 0">
+                    <template v-for="(comment, idx) in comments" :key="comment.id">
+                      <Divider v-if="idx > 0" />
+                      <Comment
+                        :author="comment.commenter?.nickname ?? comment.commenter?.username ?? '팬'"
+                        :avatarSrc="comment.commenter?.profile_image ?? undefined"
+                        :initials="(comment.commenter?.nickname ?? '?')[0]"
+                        :time="timeAgo(comment.created_at)"
+                        :body="comment.text ?? ''"
+                        :likeCount="comment.likes_count ?? 0"
+                        :replyCount="comment.replies_count ?? 0"
+                        avatarTone="neutral"
+                      />
+                    </template>
+                  </template>
+                  <Text v-else tone="tertiary" variant="body-sm">아직 댓글이 없습니다. 첫 댓글을 남겨보세요!</Text>
                 </Stack>
               </Stack>
 
               <Stack :style="{ maxWidth: '1400px' }" as="section" direction="column" gap="xs">
                 <SectionTitle
                   :style="{ width: '100%' }"
-                  title="Noel ASMR의 다른 작품"
+                  :title="(post?.creator_user?.nickname ?? '크리에이터') + '의 다른 작품'"
                   icon="hand-coins"
                   as="header"
                   align="center"
@@ -398,9 +385,10 @@ import {
                     <Button trailingIcon="chevron-right" badgeVariant="danger" variant="soft" size="sm" shape="default">모두보기</Button>
                   </SectionTitleGroup>
                 </SectionTitle>
+                <Text v-if="creatorPosts.length === 0" tone="tertiary">다른 작품이 없습니다.</Text>
                 <CardGrid
-                  :itemProps="[{}, { thumbnailImageUrl: 'https://i.pinimg.com/736x/a8/bf/a3/a8bfa3749e7f7ffaa0441b108d8a23fb.jpg' }, { thumbnailImageUrl: 'https://i.pinimg.com/1200x/8e/03/85/8e0385f19e37344b55bdb999a8e655e3.jpg' }, {}, { thumbnailImageUrl: 'https://i.pinimg.com/736x/a8/bf/a3/a8bfa3749e7f7ffaa0441b108d8a23fb.jpg' }, { thumbnailImageUrl: 'https://i.pinimg.com/736x/64/35/1b/64351bf5a15fdc1674758340556a1967.jpg' }]"
-                  count="10"
+                  v-else
+                  :count="creatorPosts.length"
                   itemSize="custom"
                   itemSizeOverride="240px"
                   layout="row"
@@ -410,28 +398,17 @@ import {
                   scroll="snap"
                 >
                   <VideoListCard
+                    v-for="p in creatorPosts"
+                    :key="p.id"
                     mediaSize="sm"
                     :showAvatar="false"
-                    avatarSrc="https://i.pinimg.com/1200x/d8/3e/d0/d83ed058e35a1b8fa43b8ffd4bf99bca.jpg"
-                    thumbnailImageUrl="https://i.pinimg.com/1200x/d8/3e/d0/d83ed058e35a1b8fa43b8ffd4bf99bca.jpg"
-                    title="새벽이 떠오를 때 — 2인 콜라보 단편"
-                    creatorName="코다 / Koda"
-                    meta="92K 시청 · 1주 전"
-                    duration="17:02"
-                    progress="64"
-                    progressLabel="Media progress"
-                    actionLabel="More options"
-                    actionSize="sm"
+                    :thumbnailImageUrl="p.locked_thumbnail_url ?? undefined"
+                    :title="p.title_ko ?? ''"
+                    :creatorName="post?.creator_user?.nickname ?? ''"
+                    :meta="timeAgo(p.created_at)"
                     thumbnailAspect="16/9"
-                    avatarAlt="코다 / Koda"
-                    avatarInitials="코다"
-                    creatorBadge="후원자 145k"
-                    creatorBadgeStatus="neutral"
-                    creatorBadgeVariant="flat"
-                    badgeText="FREE"
-                    badgeVariant="solid"
-                    badgeStatus="success"
-                    :creatorVerified="true"
+                    :avatarAlt="post?.creator_user?.nickname ?? ''"
+                    :avatarInitials="(post?.creator_user?.nickname ?? '?')[0]"
                     :showGrain="true"
                     variant="vertical"
                     avatarTone="brand"
@@ -439,10 +416,10 @@ import {
                     size="sm"
                     avatarSize="sm"
                     avatarShape="circle"
-                    thumbnailWidth="50%"
                     thumbnailBackground="linear-gradient(140deg, #0c1429, #4c1d95 50%, #be185d)"
                     actionIcon="ellipsis"
                     :showAction="true"
+                    @click="router.push('/video/' + p.id)"
                   />
                 </CardGrid>
               </Stack>
@@ -467,9 +444,10 @@ import {
                     <Button trailingIcon="chevron-right" badgeVariant="danger" variant="soft" size="sm" shape="default">모두보기</Button>
                   </SectionTitleGroup>
                 </SectionTitle>
+                <Text v-if="videoStore.posts.filter(p => String(p.id) !== String(route.params.id)).length === 0" tone="tertiary">비슷한 작품이 없습니다.</Text>
                 <CardGrid
-                  :itemProps="[{}, { thumbnailImageUrl: 'https://i.pinimg.com/736x/a8/bf/a3/a8bfa3749e7f7ffaa0441b108d8a23fb.jpg', badgeText: 'Suppoter\'s Only', badgeStatus: 'info', progress: '32' }, { thumbnailImageUrl: 'https://i.pinimg.com/1200x/8e/03/85/8e0385f19e37344b55bdb999a8e655e3.jpg' }, {}, { thumbnailImageUrl: 'https://i.pinimg.com/736x/a8/bf/a3/a8bfa3749e7f7ffaa0441b108d8a23fb.jpg' }, { thumbnailImageUrl: 'https://i.pinimg.com/736x/64/35/1b/64351bf5a15fdc1674758340556a1967.jpg' }]"
-                  count="10"
+                  v-else
+                  :count="videoStore.posts.filter(p => String(p.id) !== String(route.params.id)).slice(0, 8).length"
                   itemSize="custom"
                   itemSizeOverride="240px"
                   layout="row"
@@ -479,28 +457,20 @@ import {
                   scroll="snap"
                 >
                   <VideoListCard
-                    badgeText="19+"
+                    v-for="p in videoStore.posts.filter(p => String(p.id) !== String(route.params.id)).slice(0, 8)"
+                    :key="p.id"
                     mediaSize="sm"
                     :showAvatar="true"
-                    avatarSrc="https://i.pinimg.com/1200x/d8/3e/d0/d83ed058e35a1b8fa43b8ffd4bf99bca.jpg"
-                    thumbnailImageUrl="https://i.pinimg.com/1200x/d8/3e/d0/d83ed058e35a1b8fa43b8ffd4bf99bca.jpg"
-                    title="새벽이 떠오를 때 — 2인 콜라보 단편"
-                    creatorName="코다 / Koda"
-                    meta="92K 시청 · 1주 전"
-                    duration="17:02"
-                    progress="64"
-                    progressLabel="Media progress"
+                    :thumbnailImageUrl="p.locked_thumbnail_url ?? undefined"
+                    :title="p.title_ko ?? ''"
+                    :creatorName="p.creator_user?.nickname ?? ''"
+                    :meta="timeAgo(p.created_at)"
                     actionLabel="More options"
                     actionSize="sm"
                     thumbnailAspect="16/9"
-                    avatarAlt="코다 / Koda"
-                    avatarInitials="코다"
-                    creatorBadge="후원자 145k"
-                    creatorBadgeStatus="neutral"
-                    creatorBadgeVariant="flat"
-                    badgeVariant="solid"
-                    badgeStatus="danger"
-                    :creatorVerified="true"
+                    :avatarAlt="p.creator_user?.nickname ?? ''"
+                    :avatarInitials="(p.creator_user?.nickname ?? '?')[0]"
+                    :avatarSrc="p.creator_user?.profile_image ?? undefined"
                     :showGrain="true"
                     variant="vertical"
                     avatarTone="brand"
@@ -508,10 +478,11 @@ import {
                     size="sm"
                     avatarSize="sm"
                     avatarShape="circle"
-                    thumbnailWidth="50%"
                     thumbnailBackground="linear-gradient(140deg, #0c1429, #4c1d95 50%, #be185d)"
                     actionIcon="ellipsis"
                     :showAction="true"
+                    style="cursor: pointer;"
+                    @click="router.push('/video/' + p.id)"
                   />
                 </CardGrid>
               </Stack>
@@ -562,16 +533,25 @@ import {
             </Stack>
 
             <!-- Suggested creators -->
-            <Stack as="section" direction="column" gap="var(--wb-spacing-space-2)" aria-label="Suggested creators">
+            <Stack v-if="creatorStore.discover.length > 0" as="section" direction="column" gap="var(--wb-spacing-space-2)" aria-label="Suggested creators">
               <Stack direction="row" align="center" justify="between" marginBottom="12px" height="21px">
                 <Text as="h3" variant="ui" weight="semibold">팔로우 추천</Text>
-                <Link variant="subtle" size="sm" href="#">새로고침</Link>
+                <Link variant="subtle" size="sm" @click="creatorStore.fetchDiscover()">새로고침</Link>
               </Stack>
               <Stack direction="column" gap="md">
-                <UserBlock avatarSize="sm" avatarSrc="https://i.pinimg.com/1200x/b9/45/02/b94502342dfd29c213a99bb1d93c151d.jpg" name="SOYU" meta="보컬 · 24.1K · Hailey와 자주 작업" initials="SY" avatarTone="pink" :verified="true" size="sm" />
-                <UserBlock avatarSize="sm" avatarSrc="https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg" name="Mika 三輪" meta="첼리스트 · 8.6K · 콜라보 가능" initials="MK" avatarTone="green" size="sm" />
-                <UserBlock avatarSize="sm" avatarSrc="https://i.pinimg.com/1200x/e8/df/8e/e8df8ee3fd256e1fa1b1714a59d03517.jpg" name="Nexus Choir" meta="합창 · AI 보컬 합성 · 3.2K" initials="NX" avatarTone="blue" size="sm" />
-                <UserBlock avatarSize="sm" avatarSrc="https://i.pinimg.com/736x/ac/30/ad/ac30ad5b4d550027ff5be9fe95e3f196.jpg" name="유진 / Yujin" meta="사운드 디자이너 · 1.4K" initials="YJ" avatarTone="green" size="sm" />
+                <UserBlock
+                  v-for="creator in creatorStore.discover.slice(0, 4)"
+                  :key="creator.id"
+                  avatarSize="sm"
+                  :avatarSrc="creator.profile_image ?? undefined"
+                  :name="creator.nickname ?? ''"
+                  :meta="creator.tags?.slice(0, 2).map(t => '#' + t).join(' · ') ?? ''"
+                  :initials="(creator.nickname ?? '?').slice(0, 2).toUpperCase()"
+                  avatarTone="brand"
+                  size="sm"
+                  :style="{ cursor: 'pointer' }"
+                  @click="router.push('/creator/' + creator.id)"
+                />
               </Stack>
             </Stack>
           </Stack>

@@ -1,9 +1,5 @@
 <script setup>
 import {
-  Sidebar,
-  SidebarFollowRow,
-  SidebarGroup,
-  SidebarItem,
   Stack,
   UserBlock,
   PopoverList,
@@ -19,7 +15,6 @@ import {
   Button,
   Text,
   SectionTitleGroup,
-  SidebarFooter,
   UserCardHead,
   UserCard,
   Input,
@@ -39,84 +34,6 @@ import {
     align="stretch"
     gap="lg"
   >
-    <!-- LEFT — SIDEBAR -->
-    <Sidebar
-      :style="{ width: '72px' }"
-      :collapsed="true"
-      collapsedWidth="72"
-      headerLogoImage="/workbench-assets/icons/logo-mpks329o.svg"
-      headerSymbolImage="/workbench-assets/icons/symbol-mpks329n.svg"
-      presentation="sidebar"
-      width="272px"
-      background="none"
-      :bordered="false"
-      radius="none"
-      brandMarkText="Y"
-      expandedBrandDisplay="symbol-logo"
-      height="100vh"
-    >
-      <SidebarGroup seeAllIcon="chevron-right">
-        <UserCard name="Hailey Luna" initials="HL" meta="Creator · live now" variant="outline" tint="sunken">
-          <UserCardHead>
-            <UserBlock
-              action3Icon=""
-              action3Variant="ghost"
-              action2Icon=""
-              avatarSize="sm"
-              avatarSrc="https://i.pinimg.com/736x/cb/12/b2/cb12b2f39982bf66734cd7e5a34eb891.jpg"
-              :style="{ width: '100%' }"
-              name="Munhee J"
-              meta="@munhee · 크리에이터"
-              initials="MJ"
-              avatarTone="purple"
-              :verified="true"
-              size="md"
-            >
-              <ButtonPopover
-                :style="{ width: '32px' }"
-                leadingIcon="ellipsis"
-                :iconOnly="true"
-                trailingIcon="chevron-down"
-                placement="bottom-start"
-                buttonLabel="최신순"
-                buttonShape="pill"
-                buttonSize="sm"
-                buttonVariant="ghost"
-                :closeOnItemClick="true"
-              >
-                <PopoverList>
-                  <PopoverItem icon="circle-user">프로필</PopoverItem>
-                  <PopoverItem icon="layout-dashboard">대시보드</PopoverItem>
-                  <PopoverItem icon="settings">설정</PopoverItem>
-                </PopoverList>
-              </ButtonPopover>
-            </UserBlock>
-          </UserCardHead>
-        </UserCard>
-      </SidebarGroup>
-
-      <SidebarGroup seeAllIcon="chevron-right">
-        <SidebarItem :emphasized="false" badgeVariant="subtle" icon="plus" label="작품 만들기" :active="false" />
-      </SidebarGroup>
-
-      <SidebarGroup>
-        <SidebarItem icon="house" label="홈" :active="true" />
-        <SidebarItem icon="layout-grid" label="탐색" :active="false" />
-        <SidebarItem icon="book-marked" label="구매목록" :active="false" />
-        <SidebarItem badge="12" icon="bell-dot" label="알림" :active="false" />
-      </SidebarGroup>
-
-      <SidebarGroup count="45" seeAllLabel="모두보기" label="팔로잉">
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/736x/ac/30/ad/ac30ad5b4d550027ff5be9fe95e3f196.jpg" size="sm" name="Hailey Luna" initials="HL" avatarTone="brand" status="live" tail="LIVE" tailStatus="live" tailVariant="plain" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/b9/45/02/b94502342dfd29c213a99bb1d93c151d.jpg" size="sm" name="NeoVoice" initials="NV" avatarTone="teal" tail="방송중" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/e8/df/8e/e8df8ee3fd256e1fa1b1714a59d03517.jpg" size="sm" name="코다 / Koda" initials="KO" avatarTone="amber" tail="작업중" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg" size="sm" name="Ren Morimoto" initials="RM" avatarTone="purple" tail="5분" as="button" />
-        <SidebarFollowRow avatarSrc="https://i.pinimg.com/736x/ac/30/ad/ac30ad5b4d550027ff5be9fe95e3f196.jpg" size="sm" name="aether.studio" initials="AT" avatarTone="coral" tail="3시간" as="button" />
-      </SidebarGroup>
-
-      <SidebarFooter primaryLabel="다크모드" primaryIcon="moon" secondaryLabel="설정" secondaryIcon="settings" />
-    </Sidebar>
-
     <Stack
       :style="{ height: '100%', paddingRight: 'var(--ds-spacing-stack-padding-lg)', overflow: 'hidden', width: '100%', paddingTop: '0.75rem' }"
       as="div"
