@@ -1,5 +1,6 @@
 class Post < ApplicationRecord
   belongs_to :creator_user, counter_cache: :posts_count
+  has_many_attached :media
   has_many :post_likes, dependent: :destroy
   has_many :post_comments, dependent: :destroy
   has_many :post_seens, dependent: :destroy

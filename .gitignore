@@ -5,6 +5,7 @@ frontend/.env*.local
 
 # Rails
 backend/log/*.log
+backend/db/seed_files/
 backend/tmp/
 backend/storage/
 backend/public/assets
