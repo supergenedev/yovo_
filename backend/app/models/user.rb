@@ -14,6 +14,7 @@ class User < ApplicationRecord
   has_many :bookmarked_posts, through: :bookmarks, source: :post
   has_many :post_comments, as: :commenter, dependent: :destroy
   has_many :post_comment_likes, as: :liker, dependent: :destroy
+  has_many :notifications, dependent: :destroy
   has_one_attached :profile_image
   has_one_attached :banner_image
 
@@ -22,6 +23,12 @@ class User < ApplicationRecord
   validates :introduction, presence: { allow_blank: true }, length: { maximum: 1000 }
 
   after_create :create_user_coin
+
+  def apply_as_creator!
+    raise ArgumentError, "Already a creator" if creator_user.present?
+
+    CreatorUser.create!(user: self, nickname:, status: :pending)
+  end
 
   private
 

@@ -27,6 +27,13 @@ module Api
         render_with_pagy(collection: posts, serializer: PostSerializer, page: params[:page], limit: params[:items])
       end
 
+      def apply_creator
+        creator_user = current_user.apply_as_creator!
+        render json: creator_user, serializer: CreatorUserSerializer, scope: current_user
+      rescue ArgumentError => e
+        raise ActionController::BadRequest, e.message
+      end
+
       def confirm_username
         username = params[:username]
         if !User.exists?(username:)

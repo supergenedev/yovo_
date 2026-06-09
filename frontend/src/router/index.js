@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const routes = [
   { path: '/', component: () => import('@/views/MainView.vue') },
@@ -9,6 +10,8 @@ const routes = [
   { path: '/library', component: () => import('@/views/LibraryView.vue') },
   { path: '/notification', component: () => import('@/views/NotificationView.vue') },
   { path: '/create', component: () => import('@/views/CreateView.vue') },
+  { path: '/dm', component: () => import('@/views/DmView.vue') },
+  { path: '/auth', component: () => import('@/views/AuthView.vue') },
   { path: '/guide/2col', component: () => import('@/views/guide/TwoColumnView.vue') },
   { path: '/guide/3col', component: () => import('@/views/guide/ThreeColumnView.vue') },
 ]
@@ -16,6 +19,13 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+})
+
+router.beforeEach((to) => {
+  const authStore = useAuthStore()
+  if (!authStore.isLoggedIn && to.path !== '/auth') {
+    return '/auth'
+  }
 })
 
 export default router

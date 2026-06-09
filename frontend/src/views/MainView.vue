@@ -1,4 +1,5 @@
 <script setup>
+import { onMounted } from 'vue'
 import {
   Sidebar,
   SidebarFollowRow,
@@ -31,6 +32,68 @@ import {
   Story,
   StoryStrip,
 } from '@/components'
+import { useFeedStore } from '@/stores/feed'
+import { useInteractionsStore } from '@/stores/interactions'
+
+const feedStore = useFeedStore()
+const interactionsStore = useInteractionsStore()
+
+onMounted(async () => {
+  await feedStore.fetchFeed()
+  interactionsStore.initFromPosts(feedStore.posts)
+})
+
+function mapPostToCard(post) {
+  const creator = post.creator_user
+  const liked = interactionsStore.isLiked(post.id)
+  const bookmarked = interactionsStore.isBookmarked(post.id)
+  return {
+    userName: creator?.nickname ?? '알 수 없음',
+    userInitials: getInitials(creator?.nickname),
+    userAvatarSrc: creator?.profile_image ?? undefined,
+    avatarTone: 'brand',
+    verified: creator?.creator_type === 'official',
+    title: post.title_ko ?? post.title_ja,
+    prose: post.body_ko ?? post.body_ja,
+    imageUrl: post.locked_thumbnail_url ?? undefined,
+    kind: contentKind(post.content_type),
+    cardVariant: 'outline',
+    cardPadding: 'md',
+    userMeta: timeAgo(post.created_at),
+    stats: [
+      { label: liked ? 'Likes' : 'Likes', value: post.likes_count },
+      { label: 'Comments', value: post.comments_count },
+    ],
+    _liked: liked,
+    _bookmarked: bookmarked,
+    _postId: post.id,
+  }
+}
+
+function getInitials(name) {
+  if (!name) return 'UN'
+  const words = name.trim().split(/\s+/)
+  return words.length >= 2
+    ? (words[0][0] + words[1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase()
+}
+
+function contentKind(contentType) {
+  if (contentType === 'video') return 'video'
+  if (contentType === 'episode') return 'audio'
+  return 'text'
+}
+
+function timeAgo(ms) {
+  if (!ms) return ''
+  const diff = Date.now() - ms
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return '방금 전'
+  if (mins < 60) return `${mins}분 전`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}시간 전`
+  return `${Math.floor(hours / 24)}일 전`
+}
 </script>
 
 <template>
@@ -181,131 +244,42 @@ import {
                     </SectionTitleGroup>
                   </SectionTitle>
 
-                  <PostCard
-                    imageUrl="https://i.pinimg.com/736x/a8/bf/a3/a8bfa3749e7f7ffaa0441b108d8a23fb.jpg"
-                    kind="video"
-                    userAvatarSrc="https://i.pinimg.com/736x/cb/12/b2/cb12b2f39982bf66734cd7e5a34eb891.jpg"
-                    bodyVariant="none"
-                    userName="Hailey Luna"
-                    userMeta="보컬리스트 · 콜라보 라이브 · 방송 중"
-                    userInitials="HL"
-                    avatarTone="brand"
-                    :verified="true"
-                    title="NeoVoice랑 즉흥 듀엣 — AI 영상 위에 보컬 얹기"
-                    prose="지금 NeoVoice 채널과 합방 중입니다. 끝나면 풀버전 영상으로 편집해서 올릴게요. 채팅으로 듣고 싶은 곡 알려주세요."
-                    cardVariant="outline"
-                    cardPadding="md"
-                    :stats="[
-                      { label: '시청 중', value: '1,218' },
-                      { label: '채팅', value: 284 },
-                      { label: 'Likes', value: 4218 },
-                      { label: 'Supporters', value: 92, tone: 'brand', icon: 'gem', spacerBefore: true },
-                    ]"
-                  />
+                  <Stack v-if="feedStore.loading && feedStore.posts.length === 0" align="center" justify="center" padding="2xl">
+                    <Text tone="tertiary">피드를 불러오는 중...</Text>
+                  </Stack>
+                  <Stack v-else-if="feedStore.posts.length === 0" align="center" justify="center" padding="2xl">
+                    <Text tone="tertiary">팔로우한 크리에이터의 새 포스트가 없습니다.</Text>
+                  </Stack>
+                  <div
+                    v-for="post in feedStore.posts"
+                    :key="post.id"
+                    :style="{ position: 'relative' }"
+                    @click.capture="(e) => {
+                      const btn = e.target.closest('.post-card-action')
+                      if (!btn) return
+                      const icon = btn.querySelector('[data-icon]')?.dataset?.icon ?? btn.querySelector('svg')?.getAttribute('data-lucide') ?? ''
+                      if (icon === 'heart' || btn.textContent?.trim().startsWith('Like')) {
+                        e.stopPropagation()
+                        interactionsStore.toggleLike(post.id)
+                      }
+                    }"
+                  >
+                    <PostCard v-bind="mapPostToCard(post)" />
+                  </div>
 
-                  <!-- POST 2 — Video Collab -->
-                  <PostCard
-                    proseVariant="default"
-                    imageUrl="https://i.pinimg.com/1200x/8e/03/85/8e0385f19e37344b55bdb999a8e655e3.jpg"
-                    imageAspect="16/9"
-                    userAvatarSrc="https://i.pinimg.com/1200x/8e/03/85/8e0385f19e37344b55bdb999a8e655e3.jpg"
-                    kind="video"
-                    bodyVariant="none"
-                    userName="코다 / Koda"
-                    userMeta="AI 영상감독 · 인천 · 2시간 전"
-                    userInitials="KO"
-                    avatarTone="amber"
-                    :verified="true"
-                    title="달이 지는 도시 — 3인 콜라보 단편 풀버전 공개"
-                    prose="먼저 멤버 분들께만 풀어드렸던 17분짜리 단편을 오늘 일반 공개합니다. 첼로 즉흥과 보컬은 한 번에 녹음했고, AI 영상은 25번 정도 다시 만들었어요."
-                    cardVariant="outline"
-                    cardPadding="md"
-                    :stats="[
-                      { label: '재생', value: '124K' },
-                      { label: 'Likes', value: '18.4K' },
-                      { label: 'Comments', value: '1,248' },
-                      { label: 'Supporters', value: '1,840', tone: 'brand', icon: 'gem', spacerBefore: true },
-                    ]"
-                  />
-
-                  <!-- POST 3 — Voice Casting Call (audio reference) -->
-                  <PostCard
-                    userAvatarSrc="https://i.pinimg.com/736x/ac/30/ad/ac30ad5b4d550027ff5be9fe95e3f196.jpg"
-                    kind="cast"
-                    bodyVariant="voice-clip"
-                    userName="aether.studio"
-                    userMeta="AI 단편 감독 · 부산 · 5시간 전"
-                    userInitials="AT"
-                    avatarTone="coral"
-                    :verified="true"
-                    title="[모집] AI 단편 「여름 끝의 라디오」에 들어갈 내레이션 한 줄 보내주세요"
-                    prose="중간에 라디오 진행자 컷이 있는데, 거기 들어갈 15초 내외 한국어/영어 내레이션을 모집합니다. 채택되면 영상 크레딧 + 500 크레딧 보상."
-                    cardVariant="outline"
-                    cardPadding="md"
-                    :stats="[
-                      { label: '응답', value: 38 },
-                      { label: '남음', value: '4일 12시간' },
-                      { label: '관심', value: 214 },
-                    ]"
-                  />
-
-                  <!-- POST 5 — Text + image grid (creator update) -->
-                  <PostCard
-                    imageTile6Src="https://i.pinimg.com/1200x/d8/3e/d0/d83ed058e35a1b8fa43b8ffd4bf99bca.jpg"
-                    imageTile5Src="https://i.pinimg.com/1200x/ab/5b/0c/ab5b0cd28321dfb14b3e0311c3616207.jpg"
-                    imageTileCount="6"
-                    imageAspect="4/5"
-                    imageTile2Src="https://i.pinimg.com/736x/3e/36/00/3e3600f33f0c190104d30d2a971e1659.jpg"
-                    imageTile4Src="https://i.pinimg.com/736x/65/2a/e8/652ae82db9bcdc65e6ddc3fe5d61594a.jpg"
-                    imageTile3Src="https://i.pinimg.com/1200x/ad/e4/53/ade453608e2e7c8ffc38bc8ba991cb50.jpg"
-                    imageTile1Src="https://i.pinimg.com/736x/64/35/1b/64351bf5a15fdc1674758340556a1967.jpg"
-                    userAvatarSrc="https://i.pinimg.com/1200x/b9/45/02/b94502342dfd29c213a99bb1d93c151d.jpg"
-                    kind="text"
-                    bodyVariant="image-update"
-                    userName="Ren Morimoto"
-                    userMeta="성우 · 도쿄 · 7시간 전"
-                    userInitials="RM"
-                    avatarTone="purple"
-                    :verified="true"
-                    prose="새로운 캐릭터 등장"
-                    proseVariant="lead"
-                    cardVariant="outline"
-                    cardPadding="md"
-                    :stats="[
-                      { label: 'Likes', value: '1,840' },
-                      { label: 'Comments', value: 124 },
-                      { label: 'Saves', value: 62 },
-                      { label: 'Supporters', value: 240, tone: 'brand', icon: 'gem', spacerBefore: true },
-                    ]"
-                  />
-
-                  <!-- POST 6 — AI Music release (audio single) -->
-                  <PostCard
-                    userAvatarSrc="https://i.pinimg.com/1200x/b9/45/02/b94502342dfd29c213a99bb1d93c151d.jpg"
-                    audioArtImageUrl="https://i.pinimg.com/1200x/b9/45/02/b94502342dfd29c213a99bb1d93c151d.jpg"
-                    kind="audio"
-                    bodyVariant="music-release"
-                    userName="NeoVoice"
-                    userMeta="AI 보컬리스트 · 어제 오후 8시 · 음원 공개"
-                    userInitials="NV"
-                    avatarTone="teal"
-                    :verified="true"
-                    title="싱글 「dusk.exe」 — 3분 25초"
-                    prose="한밤중에 만든 트랙이라 시끄러우면 죄송합니다. 보컬 라인은 4번 다시 짰어요."
-                    cardVariant="outline"
-                    cardPadding="md"
-                    :stats="[
-                      { label: '재생', value: '8,420' },
-                      { label: 'Likes', value: '1,128' },
-                      { label: '라이브러리', value: 96 },
-                      { label: 'Supporters', value: 320, tone: 'brand', icon: 'gem', spacerBefore: true },
-                    ]"
-                  />
                 </PostStack>
               </Stack>
 
               <Stack direction="row" justify="center" padding="var(--wb-spacing-space-4)">
-                <Button variant="ghost" size="sm" label="더 불러오기" trailingIcon="chevron-down" />
+                <Button
+                  v-if="feedStore.hasMore"
+                  variant="ghost"
+                  size="sm"
+                  label="더 불러오기"
+                  trailingIcon="chevron-down"
+                  :disabled="feedStore.loading"
+                  @click="feedStore.loadMore()"
+                />
               </Stack>
 
               <Stack

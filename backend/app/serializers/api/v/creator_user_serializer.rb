@@ -12,6 +12,14 @@ module Api
         object.profile_image.attached? ? url_for(object.profile_image) : nil
       end
 
+      attribute :tags do
+        object.creator_tags.ordered.pluck(:name)
+      end
+
+      attribute :creator_type do
+        object.creator_type
+      end
+
       attribute :interaction_with_me do
         InteractionWithMeSerializer.new(object, scope: scope)
       end

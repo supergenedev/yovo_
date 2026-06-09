@@ -26,6 +26,14 @@ import {
   Tab,
   Media,
 } from '@/components'
+import { onMounted } from 'vue'
+import { useCreatorStore } from '@/stores/creator'
+
+const creatorStore = useCreatorStore()
+
+onMounted(() => {
+  creatorStore.fetchRecommended()
+})
 </script>
 
 <template>
@@ -206,18 +214,33 @@ import {
               <Button trailingIcon="chevron-right" variant="soft" size="sm" shape="default">모두 보기</Button>
             </SectionTitleGroup>
           </SectionTitle>
-          <CardGrid count="10" itemSize="custom" itemSizeOverride="200px" layout="row" gap="sm" :arrows="false" edgeFade="fade" scroll="snap">
-            <Card variant="outline" padding="lg">
+
+          <!-- 로딩 -->
+          <Text v-if="creatorStore.loading && creatorStore.recommended.length === 0" tone="tertiary">불러오는 중...</Text>
+
+          <!-- 빈 상태 -->
+          <Text v-else-if="!creatorStore.loading && creatorStore.recommended.length === 0" tone="tertiary">추천 크리에이터가 없습니다.</Text>
+
+          <!-- 크리에이터 목록 -->
+          <CardGrid v-else :count="creatorStore.recommended.length" itemSize="custom" itemSizeOverride="200px" layout="row" gap="sm" :arrows="false" edgeFade="fade" scroll="snap">
+            <Card v-for="creator in creatorStore.recommended" :key="creator.id" variant="outline" padding="lg">
               <Stack direction="column" align="center" gap="md">
-                <Stack as="div" radius="none" direction="column" align="center" justify="start" gap="xxs" padding="none" background="none" mask="none" maskStart="45" maskEnd="100" maskAngle="0" glassBlur="18">
-                  <Avatar initials="C" size="2xl" shape="circle" tone="purple" />
+                <Stack as="div" radius="none" direction="column" align="center" justify="start" gap="xxs" padding="none" background="none">
+                  <Avatar
+                    :src="creator.profile_image ?? undefined"
+                    :initials="(creator.nickname ?? '?')[0]"
+                    size="2xl"
+                    shape="circle"
+                    tone="neutral"
+                  />
                   <Stack justify="center" direction="row" align="center" gap="xxs">
-                    <Text as="p" variant="body" weight="semibold">코스모 픽쳐스</Text>
-                    <Icon name="badge-check" size="14px" />
+                    <Text as="p" variant="body" weight="semibold">{{ creator.nickname }}</Text>
                   </Stack>
-                  <Text as="p" variant="caption" tone="tertiary">@cosmo_pic</Text>
+                  <Text v-if="creator.followers_count != null" as="p" variant="caption" tone="tertiary">{{ creator.followers_count.toLocaleString() }} 팔로워</Text>
                 </Stack>
-                <Badge status="success" variant="flat" size="md" shape="pill" icon="trending-up">+27.8%</Badge>
+                <Stack v-if="creator.tags && creator.tags.length" direction="row" gap="xxs" :wrap="true" justify="center">
+                  <Badge v-for="tag in creator.tags.slice(0, 2)" :key="tag" status="neutral" variant="subtle" size="sm" shape="pill">{{ tag }}</Badge>
+                </Stack>
                 <Button :style="{ width: '100%' }" variant="soft" size="sm" shape="pill" leadingIcon="plus">팔로우</Button>
               </Stack>
             </Card>

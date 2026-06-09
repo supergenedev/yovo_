@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_01_01_000014) do
+ActiveRecord::Schema[8.1].define(version: 2025_01_01_000018) do
   create_table "allowlisted_jwts", force: :cascade do |t|
     t.string "aud"
     t.datetime "created_at", null: false
@@ -60,6 +60,15 @@ ActiveRecord::Schema[8.1].define(version: 2025_01_01_000014) do
     t.index ["sender_type", "sender_id"], name: "index_chats_on_sender_type_and_sender_id"
   end
 
+  create_table "creator_tags", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "creator_user_id", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["creator_user_id", "name"], name: "index_creator_tags_on_creator_user_id_and_name", unique: true
+    t.index ["creator_user_id"], name: "index_creator_tags_on_creator_user_id"
+  end
+
   create_table "creator_users", force: :cascade do |t|
     t.string "background_color", default: "#ffffff"
     t.datetime "created_at", null: false
@@ -88,6 +97,35 @@ ActiveRecord::Schema[8.1].define(version: 2025_01_01_000014) do
     t.index ["creator_user_id"], name: "index_follows_on_creator_user_id"
     t.index ["user_id", "creator_user_id"], name: "index_follows_on_user_and_creator_user_unique", unique: true
     t.index ["user_id"], name: "index_follows_on_user_id"
+  end
+
+  create_table "issues", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.bigint "issuable_id", null: false
+    t.string "issuable_type", null: false
+    t.integer "issue_reason", default: 0, null: false
+    t.integer "issue_type", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["issuable_type", "issuable_id"], name: "index_issues_on_issuable_type_and_issuable_id"
+    t.index ["user_id", "issuable_type", "issuable_id"], name: "index_issues_on_user_id_and_issuable_type_and_issuable_id", unique: true
+    t.index ["user_id"], name: "index_issues_on_user_id"
+  end
+
+  create_table "notifications", force: :cascade do |t|
+    t.text "body"
+    t.datetime "created_at", null: false
+    t.bigint "notifiable_id"
+    t.string "notifiable_type"
+    t.integer "notification_type", default: 0, null: false
+    t.datetime "read_at"
+    t.string "title"
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["notifiable_type", "notifiable_id"], name: "index_notifications_on_notifiable_type_and_notifiable_id"
+    t.index ["user_id", "read_at"], name: "index_notifications_on_user_id_and_read_at"
+    t.index ["user_id"], name: "index_notifications_on_user_id"
   end
 
   create_table "post_comment_likes", force: :cascade do |t|
@@ -135,6 +173,16 @@ ActiveRecord::Schema[8.1].define(version: 2025_01_01_000014) do
     t.index ["post_id"], name: "index_post_seens_on_post_id"
     t.index ["user_id", "post_id"], name: "index_post_seens_on_user_id_and_post_id", unique: true
     t.index ["user_id"], name: "index_post_seens_on_user_id"
+  end
+
+  create_table "post_tips", force: :cascade do |t|
+    t.integer "amount", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.integer "post_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["post_id"], name: "index_post_tips_on_post_id"
+    t.index ["user_id"], name: "index_post_tips_on_user_id"
   end
 
   create_table "posts", force: :cascade do |t|
@@ -215,8 +263,13 @@ ActiveRecord::Schema[8.1].define(version: 2025_01_01_000014) do
   add_foreign_key "allowlisted_jwts", "users", on_delete: :cascade
   add_foreign_key "bookmarks", "posts"
   add_foreign_key "bookmarks", "users"
+  add_foreign_key "creator_tags", "creator_users"
   add_foreign_key "creator_users", "users"
+  add_foreign_key "issues", "users"
+  add_foreign_key "notifications", "users"
   add_foreign_key "post_comments", "post_comments", column: "mention_id", on_delete: :nullify
   add_foreign_key "post_comments", "post_comments", column: "parent_id"
+  add_foreign_key "post_tips", "posts"
+  add_foreign_key "post_tips", "users"
   add_foreign_key "user_coins", "users"
 end

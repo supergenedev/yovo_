@@ -24,6 +24,24 @@ import {
   VideoListCard,
   SectionTitleGroup,
 } from '@/components'
+import { onMounted } from 'vue'
+import { useLibraryStore } from '@/stores/library'
+
+const libraryStore = useLibraryStore()
+
+onMounted(() => {
+  libraryStore.fetchBookmarks()
+})
+
+function timeAgo(ms) {
+  if (!ms) return ''
+  const diff = Date.now() - ms
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return '방금 전'
+  if (mins < 60) return `${mins}분 전`
+  const hours = Math.floor(mins / 60)
+  return hours < 24 ? `${hours}시간 전` : `${Math.floor(hours / 24)}일 전`
+}
 </script>
 
 <template>
@@ -215,49 +233,52 @@ import {
                   </SectionTitleGroup>
                 </Stack>
 
+                <!-- 로딩 -->
+                <Text v-if="libraryStore.loading && libraryStore.bookmarks.length === 0" tone="tertiary">불러오는 중...</Text>
+
+                <!-- 빈 상태 -->
+                <Text v-else-if="!libraryStore.loading && libraryStore.bookmarks.length === 0" tone="tertiary">저장된 작품이 없습니다.</Text>
+
                 <CardGrid
+                  v-else
                   itemMinSize="200px"
                   itemMaxSize="280px"
                   :style="{ width: '100%' }"
                   cols="4"
-                  count="20"
+                  :count="libraryStore.bookmarks.length"
                   itemSize="auto"
                   layout="grid"
                   gap="sm"
                   :arrows="false"
                   scroll="smooth"
                 >
-                  <!-- 1 — Purple, 19+, 3h -->
-                  <Stack as="article" direction="column" gap="xxs" :style="{ width: '100%', height: 'fit-content' }">
+                  <Stack
+                    v-for="post in libraryStore.bookmarks"
+                    :key="post.id"
+                    as="article"
+                    direction="column"
+                    gap="xxs"
+                    :style="{ width: '100%', height: 'fit-content' }"
+                  >
                     <Stack direction="row" align="center" gap="xs" :wrap="false">
-                      <Text as="span" tone="success" variant="body-sm" weight="medium">✓ 구매 완료</Text>
-                      <Text as="span" tone="tertiary" variant="body-sm" weight="regular">· 2026.08.15</Text>
+                      <Text as="span" tone="tertiary" variant="body-sm" weight="regular">{{ timeAgo(post.created_at) }}</Text>
                     </Stack>
                     <VideoListCard
-                      thumbnailImageUrl="https://i.pinimg.com/736x/64/35/1b/64351bf5a15fdc1674758340556a1967.jpg"
-                      avatarSrc="https://i.pinimg.com/1200x/ab/5b/0c/ab5b0cd28321dfb14b3e0311c3616207.jpg"
+                      :thumbnailImageUrl="post.locked_thumbnail_url ?? undefined"
+                      :avatarSrc="post.creator_user?.profile_image ?? undefined"
                       :style="{ height: 'fit-content' }"
-                      title="새벽이 떠오를 때 — 2인 콜라보 단편"
-                      creatorName="코다 / Koda"
-                      meta="92K 시청 · 1주 전"
-                      duration="17:02"
-                      progress="64"
-                      progressLabel="Media progress"
+                      :title="post.title_ko ?? post.title ?? ''"
+                      :creatorName="post.creator_user?.nickname ?? ''"
+                      :meta="timeAgo(post.created_at)"
+                      :duration="post.duration ?? undefined"
                       actionLabel="More options"
                       actionSize="sm"
                       thumbnailAspect="16/9"
-                      avatarAlt="코다 / Koda"
-                      avatarInitials="코다"
-                      creatorBadge="후원자 145k"
-                      creatorBadgeStatus="neutral"
-                      creatorBadgeVariant="flat"
-                      badgeText="15+"
-                      badgeVariant="solid"
-                      badgeStatus="warning"
-                      :creatorVerified="true"
+                      :avatarAlt="post.creator_user?.nickname ?? ''"
+                      :avatarInitials="(post.creator_user?.nickname ?? '?')[0]"
                       :showGrain="true"
                       variant="vertical"
-                      avatarTone="brand"
+                      avatarTone="neutral"
                       titleLines="3"
                       size="sm"
                       avatarSize="sm"
@@ -271,8 +292,15 @@ import {
                 </CardGrid>
 
                 <!-- LOAD MORE -->
-                <Stack direction="row" justify="center" padding="lg" :style="{ width: '100%' }">
-                  <Button variant="soft" shape="pill" size="md" trailingIcon="chevron-down">더 많은 작품 불러오기</Button>
+                <Stack v-if="libraryStore.hasMore" direction="row" justify="center" padding="lg" :style="{ width: '100%' }">
+                  <Button
+                    variant="soft"
+                    shape="pill"
+                    size="md"
+                    trailingIcon="chevron-down"
+                    :disabled="libraryStore.loading"
+                    @click="libraryStore.loadMore()"
+                  >더 많은 작품 불러오기</Button>
                 </Stack>
               </Stack>
             </TabsPanel>

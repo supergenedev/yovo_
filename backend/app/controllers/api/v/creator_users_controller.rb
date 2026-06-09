@@ -1,7 +1,7 @@
 module Api
   module V
     class CreatorUsersController < ApplicationController
-      before_action :set_creator_user, only: [:show, :posts]
+      before_action :set_creator_user, only: [:show, :posts, :tags]
 
       def show
         render json: @creator_user, serializer: CreatorUserSerializer
@@ -26,6 +26,10 @@ module Api
         posts = posts.where(view_type: :buyer_only) if params[:filter] == "store"
         posts = posts.where.not(content_type: :text) if params[:filter] == "media"
         render_with_pagy(collection: posts, serializer: PostSerializer, page: params[:page], limit: params[:items])
+      end
+
+      def tags
+        render json: { tags: @creator_user.creator_tags.ordered.pluck(:name) }
       end
 
       def search

@@ -26,6 +26,41 @@ import {
   Button,
   Text,
 } from '@/components'
+import { onMounted } from 'vue'
+import { useNotificationStore } from '@/stores/notification'
+
+const notifStore = useNotificationStore()
+
+onMounted(() => {
+  notifStore.fetchNotifications()
+  notifStore.fetchUnreadCount()
+})
+
+function timeAgo(ms) {
+  if (!ms) return ''
+  const diff = Date.now() - ms
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return '방금 전'
+  if (mins < 60) return `${mins}분 전`
+  const hours = Math.floor(mins / 60)
+  return hours < 24 ? `${hours}시간 전` : `${Math.floor(hours / 24)}일 전`
+}
+
+const typeConfig = {
+  post_liked:    { icon: 'heart',          label: '포스트에 좋아요가 달렸습니다' },
+  post_commented:{ icon: 'message-circle', label: '댓글이 달렸습니다' },
+  new_follower:  { icon: 'user-plus',      label: '팔로우했습니다' },
+  new_post:      { icon: 'file-text',      label: '새 포스트를 올렸습니다' },
+  post_tipped:   { icon: 'gem',            label: '팁을 보냈습니다' },
+}
+
+function getTypeConfig(type) {
+  return typeConfig[type] ?? { icon: 'bell', label: type }
+}
+
+function handleNotifClick(id) {
+  notifStore.markRead(id)
+}
 </script>
 
 <template>
@@ -154,8 +189,9 @@ import {
         >
           <Stack as="div" radius="none" direction="row" align="center" justify="start" gap="xs" padding="none" background="none" mask="none" maskStart="45" maskEnd="100" maskAngle="0" glassBlur="18">
             <Text :style="{ width: 'fit-content' }" as="h1" variant="heading-1" weight="bold">알림</Text>
-            <Badge :style="{ width: 'fit-content' }" status="danger" variant="subtle" size="md" shape="pill">3개 안읽음</Badge>
+            <Badge v-if="notifStore.unreadCount > 0" :style="{ width: 'fit-content' }" status="danger" variant="subtle" size="md" shape="pill">{{ notifStore.unreadCount }}개 안읽음</Badge>
           </Stack>
+          <Button v-if="notifStore.unreadCount > 0" shape="pill" variant="soft" size="sm" @click="notifStore.readAll()">모두 읽음</Button>
           <Button shape="pill" variant="soft" size="md" leadingIcon="ellipsis" iconOnly aria-label="더보기" />
         </Stack>
 
@@ -210,248 +246,74 @@ import {
               <TabsPanel id="notifications-panel-all" labelledBy="notifications-tab-all" :selected="true" :style="{ width: '100%' }">
                 <Stack :style="{ paddingTop: 'var(--ds-spacing-space-4)' }" direction="column" align="stretch" justify="start" gap="xl" padding="none" background="none">
 
-                  <!-- 오늘 -->
-                  <Stack direction="column" gap="xs" width="100%">
-                    <Text as="p" variant="caption" tone="tertiary" weight="semibold" transform="uppercase" :style="{ paddingLeft: 'var(--ds-spacing-space-1)' }">오늘</Text>
-                    <Card variant="bare" padding="xs" gap="xs">
+                  <!-- 로딩 상태 -->
+                  <Text v-if="notifStore.loading && notifStore.notifications.length === 0" tone="tertiary">불러오는 중...</Text>
 
-                      <!-- RINA — 새 작품 -->
-                      <Stack background="surface" as="article" direction="row" align="start" justify="start" gap="md" padding="md" radius="md">
+                  <!-- 빈 상태 -->
+                  <Text v-else-if="!notifStore.loading && notifStore.notifications.length === 0" tone="tertiary">알림이 없습니다.</Text>
+
+                  <!-- 알림 목록 -->
+                  <Card v-else variant="bare" padding="xs" gap="none">
+                    <template v-for="(notif, idx) in notifStore.notifications" :key="notif.id">
+                      <Stack
+                        as="article"
+                        :background="notif.read ? 'none' : 'surface'"
+                        direction="row"
+                        align="start"
+                        justify="start"
+                        gap="md"
+                        padding="md"
+                        width="100%"
+                        :radius="notif.read ? 'none' : 'md'"
+                        style="cursor: pointer;"
+                        @click="handleNotifClick(notif.id)"
+                      >
                         <Stack direction="row" align="center" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Stack width="auto" radius="pill" :style="{ width: '8px', height: '8px', background: 'var(--ds-color-brand-bg)', flex: '0 0 auto' }" />
-                          <Avatar src="https://i.pinimg.com/736x/3e/36/00/3e3600f33f0c190104d30d2a971e1659.jpg" initials="R" size="md" shape="circle" tone="pink" alt="RINA" />
+                          <Stack
+                            width="auto"
+                            radius="pill"
+                            :style="{
+                              width: '8px',
+                              height: '8px',
+                              flex: '0 0 auto',
+                              background: notif.read ? 'transparent' : 'var(--ds-color-brand-bg)',
+                            }"
+                          />
+                          <Avatar
+                            :src="notif.notifiable?.profile_image ?? undefined"
+                            :initials="(notif.notifiable?.nickname ?? '?')[0]"
+                            size="md"
+                            shape="circle"
+                            tone="neutral"
+                            :alt="notif.notifiable?.nickname ?? ''"
+                          />
                         </Stack>
                         <Stack direction="column" gap="xxs" :style="{ flex: '1 1 auto', minWidth: '0' }">
                           <Stack direction="row" align="center" gap="xxs" :wrap="true">
-                            <Text as="span" variant="body" weight="semibold">RINA</Text>
-                            <Icon name="badge-check" size="14px" />
-                            <Badge status="danger" variant="subtle" size="sm" shape="pill">새 작품</Badge>
+                            <Text as="span" variant="body" weight="semibold">{{ notif.notifiable?.nickname ?? 'yovo' }}</Text>
+                            <Icon :name="getTypeConfig(notif.notification_type).icon" size="14px" />
                           </Stack>
-                          <Text as="p" variant="body-sm" tone="secondary">새 작품을 업로드했어요</Text>
-                          <Text as="p" variant="caption" tone="tertiary" :truncate="true" truncateLines="1">〈루나의 첫 등장〉 1화 · 보이스드라마</Text>
+                          <Text as="p" variant="body-sm" tone="secondary">{{ notif.body || getTypeConfig(notif.notification_type).label }}</Text>
+                          <Text v-if="notif.title" as="p" variant="caption" tone="tertiary" :truncate="true" truncateLines="1">{{ notif.title }}</Text>
                         </Stack>
                         <Stack direction="column" align="end" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Text as="span" variant="caption" tone="tertiary">5분 전</Text>
+                          <Text as="span" variant="caption" tone="tertiary">{{ timeAgo(notif.created_at) }}</Text>
                         </Stack>
                       </Stack>
-
-                      <!-- MIKO Studio — 구독 갱신 -->
-                      <Stack background="surface" as="article" direction="row" align="start" justify="start" gap="md" padding="md" width="100%" radius="md">
-                        <Stack direction="row" align="center" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Stack width="auto" radius="pill" :style="{ width: '8px', height: '8px', background: 'var(--ds-color-brand-bg)', flex: '0 0 auto' }" />
-                          <Avatar initials="M" size="md" shape="circle" tone="amber" alt="MIKO Studio" />
-                        </Stack>
-                        <Stack direction="column" gap="xs" :style="{ flex: '1 1 auto', minWidth: '0' }">
-                          <Stack direction="row" align="center" gap="xxs" :wrap="true">
-                            <Text as="span" variant="body" weight="semibold">MIKO Studio</Text>
-                            <Icon name="badge-check" size="14px" />
-                            <Badge status="info" variant="subtle" size="sm" shape="pill">구독</Badge>
-                          </Stack>
-                          <Text as="p" variant="body-sm" tone="secondary">멤버십이 5월 18일에 자동 갱신될 예정입니다. · ⓒ 3,900 코인 · 매월</Text>
-                          <Stack direction="row" align="center" gap="xs" :wrap="true" marginTop="var(--ds-spacing-space-1)">
-                            <Button variant="primary" size="sm" shape="pill">구독 관리</Button>
-                            <Button variant="ghost" size="sm" shape="pill">나중에</Button>
-                          </Stack>
-                        </Stack>
-                        <Stack direction="column" align="end" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Text as="span" variant="caption" tone="tertiary">1시간 전</Text>
-                        </Stack>
-                      </Stack>
-
-                      <!-- Noel ASMR — 새 작품 -->
-                      <Stack background="surface" as="article" direction="row" align="start" justify="start" gap="md" padding="md" width="100%" radius="md">
-                        <Stack direction="row" align="center" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Stack width="auto" radius="pill" :style="{ width: '8px', height: '8px', background: 'var(--ds-color-brand-bg)', flex: '0 0 auto' }" />
-                          <Avatar initials="N" size="md" shape="circle" tone="blue" alt="Noel ASMR" />
-                        </Stack>
-                        <Stack direction="column" gap="xxs" :style="{ flex: '1 1 auto', minWidth: '0' }">
-                          <Stack direction="row" align="center" gap="xxs" :wrap="true">
-                            <Text as="span" variant="body" weight="semibold">Noel ASMR</Text>
-                            <Icon name="badge-check" size="14px" />
-                            <Badge status="danger" variant="subtle" size="sm" shape="pill">새 작품</Badge>
-                          </Stack>
-                          <Text :style="{ height: '18px' }" as="p" variant="body-sm" tone="secondary">새 ASMR 트랙이 도착했어요</Text>
-                          <Text as="p" variant="caption" tone="tertiary" :truncate="true" truncateLines="1">빗소리 30분 — 헤드폰 전용</Text>
-                        </Stack>
-                        <Stack direction="column" align="end" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Text as="span" variant="caption" tone="tertiary">3시간 전</Text>
-                        </Stack>
-                      </Stack>
-
-                    </Card>
-                  </Stack>
-
-                  <!-- 이번 주 -->
-                  <Stack direction="column" gap="xs" width="100%">
-                    <Text as="p" variant="caption" tone="tertiary" weight="semibold" transform="uppercase" :style="{ paddingLeft: 'var(--ds-spacing-space-1)' }">이번 주</Text>
-                    <Card variant="bare" padding="xs" gap="none">
-
-                      <!-- 하라 일러스트 — 팁 답장 -->
-                      <Stack as="article" direction="row" align="start" justify="start" gap="md" padding="md" width="100%">
-                        <Stack direction="row" align="center" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Stack width="auto" :style="{ width: '8px', flex: '0 0 auto' }" />
-                          <Avatar initials="하" size="md" shape="circle" tone="green" alt="하라 일러스트" />
-                        </Stack>
-                        <Stack direction="column" gap="xxs" :style="{ flex: '1 1 auto', minWidth: '0' }">
-                          <Stack direction="row" align="center" gap="xxs" :wrap="true">
-                            <Text as="span" variant="body" weight="semibold">하라 일러스트</Text>
-                            <Icon name="badge-check" size="14px" />
-                            <Badge status="warning" variant="subtle" size="sm" shape="pill" icon="coins">팁 답장</Badge>
-                          </Stack>
-                          <Text as="p" variant="body-sm" tone="secondary">팁에 감사 메시지를 보냈어요</Text>
-                          <Stack direction="row" align="start" gap="xs" padding="sm" radius="md" width="100%" marginTop="var(--ds-spacing-space-1)" :style="{ background: 'var(--ds-color-surface-subtle, rgba(148,163,184,0.10))' }">
-                            <Icon name="quote" size="14px" />
-                            <Text as="p" variant="body-sm" tone="secondary" :style="{ flex: '1 1 auto', minWidth: '0' }">비 오는 밤 작품 정말 좋아해주셔서 감사해요! 다음 시리즈도 기대해주세요 🌿</Text>
-                          </Stack>
-                        </Stack>
-                        <Stack direction="column" align="end" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Text as="span" variant="caption" tone="tertiary">어제</Text>
-                        </Stack>
-                      </Stack>
-                      <Divider orientation="horizontal" variant="solid" inset="none" />
-
-                      <!-- Jinx Comix — 답글 -->
-                      <Stack as="article" direction="row" align="start" justify="start" gap="md" padding="md" width="100%">
-                        <Stack direction="row" align="center" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Stack width="auto" :style="{ width: '8px', flex: '0 0 auto' }" />
-                          <Avatar initials="J" size="md" shape="circle" tone="purple" alt="Jinx Comix" />
-                        </Stack>
-                        <Stack direction="column" gap="xs" :style="{ flex: '1 1 auto', minWidth: '0' }">
-                          <Stack direction="row" align="center" gap="xxs" :wrap="true">
-                            <Text as="span" variant="body" weight="semibold">Jinx Comix</Text>
-                            <Icon name="badge-check" size="14px" />
-                            <Badge status="info" variant="subtle" size="sm" shape="pill">답글</Badge>
-                          </Stack>
-                          <Text as="p" variant="body-sm" tone="secondary">내 댓글에 답글을 남겼어요</Text>
-                          <Stack direction="row" align="start" gap="xs" padding="sm" radius="md" width="100%" :style="{ background: 'var(--ds-color-surface-subtle, rgba(148,163,184,0.10))' }">
-                            <Text as="p" variant="body-sm" tone="secondary" :style="{ flex: '1 1 auto', minWidth: '0' }">맞아요! 다음 화에서 그 떡밥 풀 예정이에요 👀</Text>
-                          </Stack>
-                          <Stack direction="row" align="center" gap="xs" :wrap="true">
-                            <Button variant="soft" size="sm" shape="pill" leadingIcon="reply">답글 달기</Button>
-                            <Text as="span" variant="caption" tone="tertiary">↳ 신작 코믹 30쪽 완성</Text>
-                          </Stack>
-                        </Stack>
-                        <Stack direction="column" align="end" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Text as="span" variant="caption" tone="tertiary">어제</Text>
-                        </Stack>
-                      </Stack>
-                      <Divider orientation="horizontal" variant="solid" inset="none" />
-
-                      <!-- DAISY — 새 작품 -->
-                      <Stack as="article" direction="row" align="start" justify="start" gap="md" padding="md" width="100%">
-                        <Stack direction="row" align="center" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Stack width="auto" :style="{ width: '8px', flex: '0 0 auto' }" />
-                          <Avatar initials="D" size="md" shape="circle" tone="amber" alt="DAISY" />
-                        </Stack>
-                        <Stack direction="column" gap="xxs" :style="{ flex: '1 1 auto', minWidth: '0' }">
-                          <Stack direction="row" align="center" gap="xxs" :wrap="true">
-                            <Text as="span" variant="body" weight="semibold">DAISY</Text>
-                            <Icon name="badge-check" size="14px" />
-                            <Badge status="danger" variant="subtle" size="sm" shape="pill">새 작품</Badge>
-                          </Stack>
-                          <Text as="p" variant="body-sm" tone="secondary">새 에피소드가 공개됐어요</Text>
-                          <Text as="p" variant="caption" tone="tertiary" :truncate="true" truncateLines="1">새벽 라디오 드라마 EP.07</Text>
-                        </Stack>
-                        <Stack direction="column" align="end" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Text as="span" variant="caption" tone="tertiary">2일 전</Text>
-                        </Stack>
-                      </Stack>
-                      <Divider orientation="horizontal" variant="solid" inset="none" />
-
-                      <!-- RINA — 마일스톤 -->
-                      <Stack as="article" direction="row" align="start" justify="start" gap="md" padding="md" width="100%">
-                        <Stack direction="row" align="center" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Stack width="auto" :style="{ width: '8px', flex: '0 0 auto' }" />
-                          <Avatar src="https://i.pinimg.com/736x/3e/36/00/3e3600f33f0c190104d30d2a971e1659.jpg" initials="R" size="md" shape="circle" tone="pink" alt="RINA" />
-                        </Stack>
-                        <Stack direction="column" gap="xxs" :style="{ flex: '1 1 auto', minWidth: '0' }">
-                          <Stack direction="row" align="center" gap="xxs" :wrap="true">
-                            <Text as="span" variant="body" weight="semibold">RINA</Text>
-                            <Icon name="badge-check" size="14px" />
-                            <Badge status="success" variant="subtle" size="sm" shape="pill" icon="party-popper">마일스톤</Badge>
-                          </Stack>
-                          <Text as="p" variant="body-sm" tone="secondary">당신이 응원한 RINA가 180,000명의 팔로워를 달성했어요!</Text>
-                        </Stack>
-                        <Stack direction="column" align="end" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Text as="span" variant="caption" tone="tertiary">3일 전</Text>
-                        </Stack>
-                      </Stack>
-                      <Divider orientation="horizontal" variant="solid" inset="none" />
-
-                      <!-- yovo team — yovo 소식 -->
-                      <Stack as="article" direction="row" align="start" justify="start" gap="md" padding="md" width="100%">
-                        <Stack direction="row" align="center" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Stack width="auto" :style="{ width: '8px', flex: '0 0 auto' }" />
-                          <Avatar initials="Y" size="md" shape="circle" tone="neutral" alt="yovo team" />
-                        </Stack>
-                        <Stack direction="column" gap="xxs" :style="{ flex: '1 1 auto', minWidth: '0' }">
-                          <Stack direction="row" align="center" gap="xxs" :wrap="true">
-                            <Text as="span" variant="body" weight="semibold">yovo team</Text>
-                            <Badge status="neutral" variant="solid" size="sm" shape="pill">OFFICIAL</Badge>
-                            <Badge status="neutral" variant="subtle" size="sm" shape="pill">yovo 소식</Badge>
-                          </Stack>
-                          <Text as="p" variant="body-sm" tone="secondary">이번 주 Featured 작품이 도착했어요</Text>
-                          <Text as="p" variant="caption" tone="tertiary" :truncate="true" truncateLines="1">yovo가 직접 큐레이션한 이번 주 추천작 12편을 확인해보세요.</Text>
-                        </Stack>
-                        <Stack direction="column" align="end" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Text as="span" variant="caption" tone="tertiary">4일 전</Text>
-                        </Stack>
-                      </Stack>
-                      <Divider orientation="horizontal" variant="solid" inset="none" />
-
-                      <!-- MIKO Studio — 새 작품 -->
-                      <Stack as="article" direction="row" align="start" justify="start" gap="md" padding="md" width="100%">
-                        <Stack direction="row" align="center" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Stack width="auto" :style="{ width: '8px', flex: '0 0 auto' }" />
-                          <Avatar initials="M" size="md" shape="circle" tone="amber" alt="MIKO Studio" />
-                        </Stack>
-                        <Stack direction="column" gap="xxs" :style="{ flex: '1 1 auto', minWidth: '0' }">
-                          <Stack direction="row" align="center" gap="xxs" :wrap="true">
-                            <Text as="span" variant="body" weight="semibold">MIKO Studio</Text>
-                            <Icon name="badge-check" size="14px" />
-                            <Badge status="danger" variant="subtle" size="sm" shape="pill">새 작품</Badge>
-                          </Stack>
-                          <Text as="p" variant="body-sm" tone="secondary">구독자 전용 비하인드를 공개했어요</Text>
-                          <Text as="p" variant="caption" tone="tertiary" :truncate="true" truncateLines="1">〈한여름의 끝〉 메이킹 영상 · 12분</Text>
-                        </Stack>
-                        <Stack direction="column" align="end" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Text as="span" variant="caption" tone="tertiary">5일 전</Text>
-                        </Stack>
-                      </Stack>
-
-                    </Card>
-                  </Stack>
-
-                  <!-- 이전 -->
-                  <Stack direction="column" gap="xs" width="100%">
-                    <Text as="p" variant="caption" tone="tertiary" weight="semibold" transform="uppercase" :style="{ paddingLeft: 'var(--ds-spacing-space-1)' }">이전</Text>
-                    <Card variant="bare" padding="xs" gap="none">
-
-                      <!-- 사야 SAYA — 구독 -->
-                      <Stack as="article" direction="row" align="start" justify="start" gap="md" padding="md" width="100%">
-                        <Stack direction="row" align="center" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Stack width="auto" :style="{ width: '8px', flex: '0 0 auto' }" />
-                          <Avatar initials="S" size="md" shape="circle" tone="coral" alt="사야 SAYA" />
-                        </Stack>
-                        <Stack direction="column" gap="xxs" :style="{ flex: '1 1 auto', minWidth: '0' }">
-                          <Stack direction="row" align="center" gap="xxs" :wrap="true">
-                            <Text as="span" variant="body" weight="semibold">사야 SAYA</Text>
-                            <Icon name="badge-check" size="14px" />
-                            <Badge status="info" variant="subtle" size="sm" shape="pill">구독</Badge>
-                          </Stack>
-                          <Text as="p" variant="body-sm" tone="secondary">멤버십에 가입한 지 30일이 되었어요. 감사 메시지가 도착했어요.</Text>
-                        </Stack>
-                        <Stack direction="column" align="end" gap="xs" width="auto" :style="{ flex: '0 0 auto' }">
-                          <Text as="span" variant="caption" tone="tertiary">1주 전</Text>
-                        </Stack>
-                      </Stack>
-
-                    </Card>
-                  </Stack>
+                      <Divider v-if="idx < notifStore.notifications.length - 1" orientation="horizontal" variant="solid" inset="none" />
+                    </template>
+                  </Card>
 
                   <!-- Load more -->
-                  <Stack direction="row" justify="center" marginTop="var(--ds-spacing-space-4)" padding="var(--wb-spacing-space-4)" height="40px">
-                    <Button variant="ghost" size="sm" label="이전 알림 더 보기" trailingIcon="chevron-down" />
+                  <Stack v-if="notifStore.hasMore" direction="row" justify="center" marginTop="var(--ds-spacing-space-4)" padding="var(--wb-spacing-space-4)" height="40px">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      label="이전 알림 더 보기"
+                      trailingIcon="chevron-down"
+                      :disabled="notifStore.loading"
+                      @click="notifStore.fetchNotifications((notifStore.meta?.page ?? 1) + 1)"
+                    />
                   </Stack>
 
                 </Stack>

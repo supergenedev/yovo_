@@ -21,6 +21,24 @@ import {
   SidebarGroup,
   Sidebar,
 } from '@/components'
+import { onMounted } from 'vue'
+import { useVideoStore } from '@/stores/video'
+
+const videoStore = useVideoStore()
+
+onMounted(() => {
+  videoStore.fetchVideoPosts()
+})
+
+function timeAgo(ms) {
+  if (!ms) return ''
+  const diff = Date.now() - ms
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return '방금 전'
+  if (mins < 60) return `${mins}분 전`
+  const hours = Math.floor(mins / 60)
+  return hours < 24 ? `${hours}시간 전` : `${Math.floor(hours / 24)}일 전`
+}
 </script>
 
 <template>
@@ -444,23 +462,16 @@ import {
           </SectionTitleGroup>
         </Stack>
 
+        <!-- 로딩 -->
+        <Text v-if="videoStore.loading && videoStore.posts.length === 0" tone="tertiary">불러오는 중...</Text>
+
+        <!-- 빈 상태 -->
+        <Text v-else-if="!videoStore.loading && videoStore.posts.length === 0" tone="tertiary">작품이 없습니다.</Text>
+
         <CardGrid
-          :itemProps="[
-            {},
-            { thumbnailImageUrl: 'https://i.pinimg.com/1200x/ab/5b/0c/ab5b0cd28321dfb14b3e0311c3616207.jpg' },
-            { thumbnailImageUrl: 'https://i.pinimg.com/1200x/d8/3e/d0/d83ed058e35a1b8fa43b8ffd4bf99bca.jpg' },
-            { thumbnailImageUrl: 'https://i.pinimg.com/736x/97/7f/36/977f363a9b80eaf236f4bbc0a1321fc7.jpg' },
-            { thumbnailImageUrl: 'https://i.pinimg.com/1200x/8c/98/24/8c98241e92d8dd4db5942c4559ca0805.jpg' },
-            { thumbnailImageUrl: 'https://i.pinimg.com/736x/cb/12/b2/cb12b2f39982bf66734cd7e5a34eb891.jpg' },
-            { thumbnailImageUrl: 'https://i.pinimg.com/736x/c3/aa/31/c3aa3137039ac43eb565b0a4aa1acbd9.jpg' },
-            { thumbnailImageUrl: 'https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg' },
-            { thumbnailImageUrl: 'https://i.pinimg.com/736x/65/2a/e8/652ae82db9bcdc65e6ddc3fe5d61594a.jpg' },
-            { thumbnailImageUrl: 'https://i.pinimg.com/1200x/d8/3e/d0/d83ed058e35a1b8fa43b8ffd4bf99bca.jpg' },
-            {},
-            { thumbnailImageUrl: 'https://i.pinimg.com/1200x/b9/45/02/b94502342dfd29c213a99bb1d93c151d.jpg' },
-          ]"
+          v-else
           cols="4"
-          count="12"
+          :count="videoStore.posts.length"
           itemSize="custom"
           itemSizeOverride="400px"
           layout="grid"
@@ -469,7 +480,32 @@ import {
           edgeFade="fade"
           scroll="snap"
         >
-          <VideoListCard mediaSize="sm" thumbnailImageUrl="https://i.pinimg.com/736x/a8/bf/a3/a8bfa3749e7f7ffaa0441b108d8a23fb.jpg" title="새벽이 떠오를 때 — 2인 콜라보 단편" creatorName="코다 / Koda" meta="92K 시청 · 1주 전" duration="17:02" progress="24" actionLabel="More options" actionSize="sm" thumbnailAspect="16/9" avatarAlt="코다 / Koda" avatarInitials="코다" creatorBadge="후원자 145k" creatorBadgeStatus="neutral" creatorBadgeVariant="flat" badgeText="15+" badgeVariant="solid" badgeStatus="warning" :creatorVerified="true" :showGrain="true" variant="vertical" avatarTone="brand" titleLines="1" size="sm" avatarSize="sm" avatarShape="circle" thumbnailWidth="50%" thumbnailBackground="linear-gradient(140deg, #0c1429, #4c1d95 50%, #be185d)" actionIcon="ellipsis" :showAction="true" />
+          <VideoListCard
+            v-for="post in videoStore.posts"
+            :key="post.id"
+            mediaSize="sm"
+            :thumbnailImageUrl="post.locked_thumbnail_url ?? undefined"
+            :title="post.title_ko ?? post.title ?? ''"
+            :creatorName="post.creator_user?.nickname ?? ''"
+            :meta="timeAgo(post.created_at)"
+            :duration="post.duration ?? undefined"
+            actionLabel="More options"
+            actionSize="sm"
+            thumbnailAspect="16/9"
+            :avatarAlt="post.creator_user?.nickname ?? ''"
+            :avatarInitials="(post.creator_user?.nickname ?? '?')[0]"
+            :avatarSrc="post.creator_user?.profile_image ?? undefined"
+            :showGrain="true"
+            variant="vertical"
+            avatarTone="neutral"
+            titleLines="1"
+            size="sm"
+            avatarSize="sm"
+            avatarShape="circle"
+            thumbnailBackground="linear-gradient(140deg, #0c1429, #4c1d95 50%, #be185d)"
+            actionIcon="ellipsis"
+            :showAction="true"
+          />
         </CardGrid>
       </Stack>
 

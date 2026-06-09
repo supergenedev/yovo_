@@ -34,9 +34,16 @@ Rails.application.routes.draw do
           post :seen
         end
       end
+      resources :creator_tags, only: %i[index create destroy]
     end
 
     namespace :v do
+      resources :feeds, only: [:index] do
+        collection do
+          get :discover
+          get :creators
+        end
+      end
       resources :follows, only: %i[create destroy] do
         collection do
           get :recommend
@@ -46,12 +53,24 @@ Rails.application.routes.draw do
         resource :post_likes, only: %i[create destroy], on: :member
         resource :bookmarks, only: %i[create destroy], on: :member
         resources :post_comments, only: %i[index create update]
+        resources :post_tips, only: [:create]
+        collection do
+          post :batch_seen
+          post :batch_get
+        end
+        member do
+          post :purchase
+        end
       end
-      resources :post_comments, only: [:destroy]
+      resources :post_comments, only: [:destroy] do
+        resource :post_comment_likes, only: %i[create destroy], on: :member
+      end
+      resources :issues, only: [:create]
       resource :me, only: %i[show update destroy], controller: :me do
         get :posts, on: :collection
         get :confirm_username, on: :collection
         get :coin, on: :collection
+        post :apply_creator, on: :collection
       end
       resources :chat_rooms, only: %i[index show create] do
         resources :chats, only: %i[index create]
@@ -67,8 +86,16 @@ Rails.application.routes.draw do
         end
         member do
           get :posts
+          get :tags
         end
       end
+      resources :notifications, only: %i[index update] do
+        collection do
+          get :unread_count
+          post :read_all
+        end
+      end
+      resources :enums, only: [:index]
     end
   end
 end
