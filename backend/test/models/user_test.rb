@@ -30,10 +30,13 @@ class UserTest < ActiveSupport::TestCase
   end
 
   test "apply_as_creator creates pending creator" do
+    # bob은 픽스처에서 이미 크리에이터이므로 새 유저로 검증
+    user = User.create!(email: "fresh@example.com", password: "password123",
+                        nickname: "fresh", jti: SecureRandom.uuid)
     assert_difference "CreatorUser.count", 1 do
-      users(:bob).apply_as_creator!
+      user.apply_as_creator!
     end
-    assert users(:bob).reload.creator_user.status_pending?
+    assert user.reload.creator_user.status_pending?
   end
 
   test "apply_as_creator raises if already creator" do

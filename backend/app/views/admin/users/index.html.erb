@@ -1,12 +1,22 @@
 <% content_for :page_title, '유저 관리' %>
 <div class="page-header">
   <h1>유저 <span style="color:#94a3b8; font-weight:400; font-size:15px;"><%= @pagy.count %>명</span></h1>
+  <%= form_with url: admin_users_path, method: :get, style: 'display:flex; gap:8px;' do %>
+    <input type="text" name="q" value="<%= params[:q] %>" placeholder="이메일/닉네임/유저명 검색"
+           style="padding:7px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; width:220px;">
+    <button type="submit" class="btn btn-ghost btn-sm">검색</button>
+  <% end %>
+</div>
+
+<div style="margin-bottom:16px; display:flex; gap:8px;">
+  <%= link_to '전체', admin_users_path(q: params[:q]), class: "btn btn-sm #{params[:filter].blank? ? 'btn-primary' : 'btn-ghost'}" %>
+  <%= link_to '정지된 유저', admin_users_path(filter: 'suspended', q: params[:q]), class: "btn btn-sm #{params[:filter] == 'suspended' ? 'btn-primary' : 'btn-ghost'}" %>
 </div>
 
 <div class="card">
   <table>
     <thead>
-      <tr><th>ID</th><th>이메일</th><th>닉네임</th><th>유저명</th><th>가입일</th><th></th></tr>
+      <tr><th>ID</th><th>이메일</th><th>닉네임</th><th>유저명</th><th>상태</th><th>가입일</th><th></th></tr>
     </thead>
     <tbody>
       <% @users.each do |user| %>
@@ -15,15 +25,32 @@
           <td><%= link_to user.email, admin_user_path(user), style: 'color:#6366f1;' %></td>
           <td><%= user.nickname %></td>
           <td style="color:#64748b;">@<%= user.username %></td>
-          <td style="color:#64748b;"><%= user.created_at.strftime('%Y.%m.%d') %></td>
           <td>
+            <% if user.suspended? %>
+              <span class="badge badge-red">정지됨</span>
+            <% else %>
+              <span class="badge badge-green">정상</span>
+            <% end %>
+          </td>
+          <td style="color:#64748b;"><%= user.created_at.strftime('%Y.%m.%d') %></td>
+          <td style="white-space:nowrap;">
+            <% if user.suspended? %>
+              <%= button_to '정지 해제', unsuspend_admin_user_path(user), method: :patch, class: 'btn btn-ghost btn-sm', style: 'display:inline-block;' %>
+            <% else %>
+              <%= button_to '정지', suspend_admin_user_path(user), method: :patch,
+                  data: { turbo_confirm: "#{user.email}을 정지할까요? 즉시 로그아웃되며 로그인이 차단됩니다." },
+                  class: 'btn btn-ghost btn-sm', style: 'display:inline-block;' %>
+            <% end %>
             <%= button_to '삭제', admin_user_path(user), method: :delete,
-                data: { turbo_confirm: "#{user.email}을 삭제할까요?" },
-                class: 'btn btn-danger btn-sm' %>
+                data: { turbo_confirm: "#{user.email}을 삭제할까요? 되돌릴 수 없습니다." },
+                class: 'btn btn-danger btn-sm', style: 'display:inline-block;' %>
           </td>
         </tr>
       <% end %>
     </tbody>
   </table>
+  <% if @users.empty? %>
+    <div class="empty-state">해당하는 유저가 없습니다</div>
+  <% end %>
   <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
 </div>

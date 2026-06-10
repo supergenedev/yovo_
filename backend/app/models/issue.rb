@@ -10,4 +10,15 @@ class Issue < ApplicationRecord
   validates :issue_reason, :issue_type, presence: true
   validates :issuable_type, inclusion: { in: VALID_ISSUABLE_TYPES }
   validates :user_id, uniqueness: { scope: [:issuable_type, :issuable_id] }
+
+  scope :unresolved, -> { where(resolved_at: nil) }
+  scope :resolved, -> { where.not(resolved_at: nil) }
+
+  def resolved?
+    resolved_at.present?
+  end
+
+  def resolve!
+    update!(resolved_at: Time.current)
+  end
 end

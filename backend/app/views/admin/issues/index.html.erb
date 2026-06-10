@@ -1,0 +1,53 @@
+<% content_for :page_title, '신고 관리' %>
+<div class="page-header">
+  <h1>신고 <span style="color:#94a3b8; font-weight:400; font-size:15px;">미처리 <%= @unresolved_count %>건</span></h1>
+  <div>
+    <%= link_to '미처리', admin_issues_path, class: "btn btn-sm #{params[:filter].blank? ? 'btn-primary' : 'btn-ghost'}" %>
+    <%= link_to '처리완료', admin_issues_path(filter: 'resolved'), class: "btn btn-sm #{params[:filter] == 'resolved' ? 'btn-primary' : 'btn-ghost'}" %>
+    <%= link_to '전체', admin_issues_path(filter: 'all'), class: "btn btn-sm #{params[:filter] == 'all' ? 'btn-primary' : 'btn-ghost'}" %>
+  </div>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>ID</th><th>유형</th><th>사유</th><th>대상</th><th>신고자</th><th>신고일</th><th>상태</th><th></th></tr>
+    </thead>
+    <tbody>
+      <% @issues.each do |issue| %>
+        <tr>
+          <td style="color:#94a3b8; font-size:12px;"><%= issue.id %></td>
+          <td><span class="badge <%= issue.report? ? 'badge-red' : 'badge-gray' %>"><%= issue.report? ? '신고' : '차단' %></span></td>
+          <td><span class="badge badge-yellow"><%= { 'not_like' => '마음에 안 듦', 'sexual' => '성적 콘텐츠', 'aversive' => '혐오', 'self_hurt' => '자해 위험', 'etc' => '기타' }[issue.issue_reason] %></span></td>
+          <td>
+            <% if issue.issuable.is_a?(Post) %>
+              <%= link_to "포스트: #{truncate(issue.issuable.title_ko, length: 20)}", admin_post_path(issue.issuable), style: 'color:#6366f1;' %>
+            <% elsif issue.issuable.is_a?(CreatorUser) %>
+              <%= link_to "크리에이터: #{issue.issuable.nickname}", admin_creator_path(issue.issuable), style: 'color:#6366f1;' %>
+            <% else %>
+              <span style="color:#94a3b8;">(삭제된 대상)</span>
+            <% end %>
+          </td>
+          <td><%= issue.user&.nickname || issue.user&.email %></td>
+          <td style="color:#64748b;"><%= issue.created_at.strftime('%Y.%m.%d %H:%M') %></td>
+          <td>
+            <% if issue.resolved? %>
+              <span class="badge badge-green">처리완료</span>
+            <% else %>
+              <span class="badge badge-red">미처리</span>
+            <% end %>
+          </td>
+          <td>
+            <% unless issue.resolved? %>
+              <%= button_to '처리 완료', resolve_admin_issue_path(issue), method: :patch, class: 'btn btn-primary btn-sm' %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+  <% if @issues.empty? %>
+    <div class="empty-state">신고가 없습니다</div>
+  <% end %>
+  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+</div>

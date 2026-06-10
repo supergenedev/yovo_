@@ -1,0 +1,41 @@
+<% content_for :page_title, '코인 관리' %>
+<div class="page-header">
+  <h1>코인 내역 <span style="color:#94a3b8; font-weight:400; font-size:15px;"><%= @pagy.count %>건</span></h1>
+  <div>
+    <%= link_to '전체', admin_coins_path, class: "btn btn-sm #{params[:history_type].blank? ? 'btn-primary' : 'btn-ghost'}" %>
+    <%= link_to '구매', admin_coins_path(history_type: 'purchase'), class: "btn btn-sm #{params[:history_type] == 'purchase' ? 'btn-primary' : 'btn-ghost'}" %>
+    <%= link_to '팁', admin_coins_path(history_type: 'tip'), class: "btn btn-sm #{params[:history_type] == 'tip' ? 'btn-primary' : 'btn-ghost'}" %>
+    <%= link_to '수동지급', admin_coins_path(history_type: 'admin_grant'), class: "btn btn-sm #{params[:history_type] == 'admin_grant' ? 'btn-primary' : 'btn-ghost'}" %>
+  </div>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>ID</th><th>유저</th><th>유형</th><th>금액</th><th>잔액 변화</th><th>대상</th><th>일시</th></tr>
+    </thead>
+    <tbody>
+      <% @histories.each do |h| %>
+        <tr>
+          <td style="color:#94a3b8; font-size:12px;"><%= h.id %></td>
+          <td><%= link_to h.user&.nickname || h.user&.email, admin_user_path(h.user), style: 'color:#6366f1;' if h.user %></td>
+          <td><span class="badge <%= { 'purchase' => 'badge-blue', 'tip' => 'badge-yellow', 'admin_grant' => 'badge-green' }[h.history_type] || 'badge-gray' %>"><%= { 'purchase' => '구매', 'tip' => '팁', 'admin_grant' => '수동지급' }[h.history_type] || h.history_type %></span></td>
+          <td style="font-weight:600; color:<%= h.amount.negative? ? '#ef4444' : '#16a34a' %>;"><%= h.amount.positive? ? '+' : '' %><%= number_with_delimiter(h.amount) %></td>
+          <td style="color:#64748b;"><%= number_with_delimiter(h.prev_coin) %> → <%= number_with_delimiter(h.current_coin) %></td>
+          <td style="color:#64748b; font-size:12px;">
+            <% if h.target_type == 'Post' && (post = Post.find_by(id: h.target_id)) %>
+              <%= link_to truncate(post.title_ko, length: 20), admin_post_path(post), style: 'color:#6366f1;' %>
+            <% else %>
+              <%= h.target_type %> #<%= h.target_id %>
+            <% end %>
+          </td>
+          <td style="color:#64748b;"><%= h.created_at.strftime('%Y.%m.%d %H:%M') %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+  <% if @histories.empty? %>
+    <div class="empty-state">코인 내역이 없습니다</div>
+  <% end %>
+  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+</div>

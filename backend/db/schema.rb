@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_10_081329) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_10_085742) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -143,9 +143,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_10_081329) do
     t.string "issuable_type", null: false
     t.integer "issue_reason", default: 0, null: false
     t.integer "issue_type", default: 0, null: false
+    t.datetime "resolved_at"
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.index ["issuable_type", "issuable_id"], name: "index_issues_on_issuable_type_and_issuable_id"
+    t.index ["resolved_at"], name: "index_issues_on_resolved_at"
     t.index ["user_id", "issuable_type", "issuable_id"], name: "index_issues_on_user_id_and_issuable_type_and_issuable_id", unique: true
     t.index ["user_id"], name: "index_issues_on_user_id"
   end
@@ -290,6 +292,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_10_081329) do
     t.json "service_providers"
     t.string "service_type"
     t.integer "sign_in_count", default: 0, null: false
+    t.datetime "suspended_at"
     t.datetime "updated_at", null: false
     t.string "username"
     t.index ["deleted_at"], name: "index_users_on_deleted_at"

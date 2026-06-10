@@ -1,7 +1,18 @@
 <% content_for :page_title, '유저 상세' %>
 <div class="page-header">
-  <h1><%= @user.nickname || @user.email %></h1>
-  <%= link_to '← 목록', admin_users_path, class: 'btn btn-ghost btn-sm' %>
+  <h1>
+    <%= @user.nickname || @user.email %>
+    <% if @user.suspended? %><span class="badge badge-red" style="vertical-align:middle;">정지됨</span><% end %>
+  </h1>
+  <div style="display:flex; gap:8px;">
+    <% if @user.suspended? %>
+      <%= button_to '정지 해제', unsuspend_admin_user_path(@user), method: :patch, class: 'btn btn-primary btn-sm' %>
+    <% else %>
+      <%= button_to '정지', suspend_admin_user_path(@user), method: :patch,
+          data: { turbo_confirm: '정지할까요? 즉시 로그아웃되며 로그인이 차단됩니다.' }, class: 'btn btn-danger btn-sm' %>
+    <% end %>
+    <%= link_to '← 목록', admin_users_path, class: 'btn btn-ghost btn-sm' %>
+  </div>
 </div>
 
 <div class="detail-grid">
@@ -11,10 +22,46 @@
     <div class="detail-item"><label>닉네임</label><span><%= @user.nickname %></span></div>
     <div class="detail-item"><label>유저명</label><span>@<%= @user.username %></span></div>
     <div class="detail-item"><label>가입일</label><span><%= @user.created_at.strftime('%Y.%m.%d %H:%M') %></span></div>
+    <% if @user.suspended? %>
+      <div class="detail-item"><label>정지일</label><span style="color:#ef4444;"><%= @user.suspended_at.strftime('%Y.%m.%d %H:%M') %></span></div>
+    <% end %>
   </div>
   <div class="card" style="padding: 20px;">
     <h3 style="font-size:13px; font-weight:600; margin-bottom:16px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">활동 통계</h3>
     <div class="detail-item"><label>좋아요 수</label><span><%= @posts_liked %></span></div>
     <div class="detail-item"><label>팔로우 수</label><span><%= @follows %></span></div>
+    <div class="detail-item"><label>코인 잔액</label><span style="font-weight:600;"><%= number_with_delimiter(@coin&.coin || 0) %> CRD</span></div>
+  </div>
+</div>
+
+<div class="detail-grid">
+  <div class="card" style="padding: 20px;">
+    <h3 style="font-size:13px; font-weight:600; margin-bottom:16px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">코인 지급/차감</h3>
+    <%= form_with url: admin_coins_path, method: :post, style: 'display:flex; gap:8px; align-items:center;' do %>
+      <input type="hidden" name="user_id" value="<%= @user.id %>">
+      <input type="number" name="amount" placeholder="금액 (음수 = 차감)" required
+             style="padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; width:180px;">
+      <button type="submit" class="btn btn-primary btn-sm">반영</button>
+    <% end %>
+    <p style="font-size:12px; color:#94a3b8; margin-top:8px;">양수는 지급, 음수는 차감입니다. 내역에 수동지급으로 기록됩니다.</p>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>최근 코인 내역</h3></div>
+    <table>
+      <thead><tr><th>유형</th><th>금액</th><th>잔액</th><th>일시</th></tr></thead>
+      <tbody>
+        <% @coin_histories.each do |h| %>
+          <tr>
+            <td><span class="badge <%= { 'purchase' => 'badge-blue', 'tip' => 'badge-yellow', 'admin_grant' => 'badge-green' }[h.history_type] || 'badge-gray' %>"><%= { 'purchase' => '구매', 'tip' => '팁', 'admin_grant' => '수동지급' }[h.history_type] || h.history_type %></span></td>
+            <td style="font-weight:600; color:<%= h.amount.negative? ? '#ef4444' : '#16a34a' %>;"><%= h.amount.positive? ? '+' : '' %><%= number_with_delimiter(h.amount) %></td>
+            <td style="color:#64748b;"><%= number_with_delimiter(h.current_coin) %></td>
+            <td style="color:#64748b;"><%= h.created_at.strftime('%m.%d %H:%M') %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <% if @coin_histories.empty? %>
+      <div class="empty-state">코인 내역이 없습니다</div>
+    <% end %>
   </div>
 </div>

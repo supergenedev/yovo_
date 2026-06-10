@@ -121,6 +121,16 @@
         <%= link_to admin_posts_path, class: "nav-item #{controller_name == 'posts' ? 'active' : ''}" do %>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>포스트
         <% end %>
+        <%= link_to admin_post_comments_path, class: "nav-item #{controller_name == 'post_comments' ? 'active' : ''}" do %>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>댓글
+        <% end %>
+        <div class="nav-section">운영</div>
+        <%= link_to admin_issues_path, class: "nav-item #{controller_name == 'issues' ? 'active' : ''}" do %>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>신고
+        <% end %>
+        <%= link_to admin_coins_path, class: "nav-item #{controller_name == 'coins' ? 'active' : ''}" do %>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></svg>코인
+        <% end %>
       </nav>
       <div class="sidebar-footer">
         <%= current_admin&.email %><br>

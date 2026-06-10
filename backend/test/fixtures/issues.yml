@@ -1,0 +1,5 @@
+report_on_post:
+  user: bob
+  issuable: published_post (Post)
+  issue_reason: 1
+  issue_type: 0

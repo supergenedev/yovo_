@@ -3,3 +3,9 @@ alice_creator:
   nickname: AliceCreator
   status: 1
   creator_type: 0
+
+bob_creator:
+  user: bob
+  nickname: BobCreator
+  status: 0
+  creator_type: 1

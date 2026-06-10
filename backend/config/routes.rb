@@ -7,9 +7,27 @@ Rails.application.routes.draw do
     post "login",  to: "sessions#create"
     delete "logout", to: "sessions#destroy", as: :logout
     root to: "dashboard#index"
-    resources :users,    only: %i[index show destroy]
-    resources :creators, only: %i[index show]
-    resources :posts,    only: %i[index show destroy]
+    resources :users, only: %i[index show destroy] do
+      member do
+        patch :suspend
+        patch :unsuspend
+      end
+    end
+    resources :creators, only: %i[index show] do
+      member do
+        patch :approve
+        patch :reject
+      end
+    end
+    resources :posts,         only: %i[index show destroy]
+    resources :post_comments, only: %i[index destroy]
+    resources :issues, only: [ :index ] do
+      member do
+        patch :resolve
+      end
+    end
+    # 코인: index=내역 조회, create=수동 지급/차감
+    resources :coins, only: %i[index create]
   end
 
   # Legacy health check

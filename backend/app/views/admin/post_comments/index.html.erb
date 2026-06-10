@@ -1,0 +1,41 @@
+<% content_for :page_title, '댓글 관리' %>
+<div class="page-header">
+  <h1>댓글 <span style="color:#94a3b8; font-weight:400; font-size:15px;"><%= @pagy.count %>개</span></h1>
+  <%= form_with url: admin_post_comments_path, method: :get, style: 'display:flex; gap:8px;' do %>
+    <input type="text" name="q" value="<%= params[:q] %>" placeholder="댓글 내용 검색"
+           style="padding:7px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; width:220px;">
+    <button type="submit" class="btn btn-ghost btn-sm">검색</button>
+  <% end %>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>ID</th><th>내용</th><th>작성자</th><th>포스트</th><th>작성일</th><th></th></tr>
+    </thead>
+    <tbody>
+      <% @comments.each do |comment| %>
+        <tr>
+          <td style="color:#94a3b8; font-size:12px;"><%= comment.id %></td>
+          <td style="max-width:320px;"><%= truncate(comment.text, length: 60) %></td>
+          <td><%= comment.commenter.try(:nickname) || comment.commenter.try(:email) %></td>
+          <td>
+            <% if comment.post %>
+              <%= link_to truncate(comment.post.title_ko, length: 20), admin_post_path(comment.post), style: 'color:#6366f1;' %>
+            <% end %>
+          </td>
+          <td style="color:#64748b;"><%= comment.created_at.strftime('%Y.%m.%d %H:%M') %></td>
+          <td>
+            <%= button_to '삭제', admin_post_comment_path(comment), method: :delete,
+                data: { turbo_confirm: '이 댓글을 삭제할까요?' },
+                class: 'btn btn-danger btn-sm' %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+  <% if @comments.empty? %>
+    <div class="empty-state">댓글이 없습니다</div>
+  <% end %>
+  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+</div>

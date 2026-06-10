@@ -1,7 +1,24 @@
 <% content_for :page_title, '크리에이터 상세' %>
 <div class="page-header">
-  <h1><%= @creator.nickname %></h1>
-  <%= link_to '← 목록', admin_creators_path, class: 'btn btn-ghost btn-sm' %>
+  <h1>
+    <%= @creator.nickname %>
+    <span class="badge <%= { 'pending' => 'badge-yellow', 'active' => 'badge-green', 'inactive' => 'badge-gray' }[@creator.status] %>" style="vertical-align:middle;">
+      <%= { 'pending' => '승인 대기', 'active' => '활성', 'inactive' => '비활성' }[@creator.status] %>
+    </span>
+  </h1>
+  <div style="display:flex; gap:8px;">
+    <% if @creator.status_pending? %>
+      <%= button_to '승인', approve_admin_creator_path(@creator), method: :patch, class: 'btn btn-primary btn-sm' %>
+      <%= button_to '거절', reject_admin_creator_path(@creator), method: :patch,
+          data: { turbo_confirm: '신청을 거절할까요?' }, class: 'btn btn-danger btn-sm' %>
+    <% elsif @creator.status_active? %>
+      <%= button_to '비활성화', reject_admin_creator_path(@creator), method: :patch,
+          data: { turbo_confirm: '비활성화할까요?' }, class: 'btn btn-danger btn-sm' %>
+    <% else %>
+      <%= button_to '활성화', approve_admin_creator_path(@creator), method: :patch, class: 'btn btn-primary btn-sm' %>
+    <% end %>
+    <%= link_to '← 목록', admin_creators_path, class: 'btn btn-ghost btn-sm' %>
+  </div>
 </div>
 
 <div class="detail-grid">

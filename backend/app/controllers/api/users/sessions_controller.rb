@@ -11,6 +11,14 @@ module Api
           }, status: :unauthorized
         end
 
+        # 수동 인증이라 devise의 active 체크를 직접 호출해야 한다 (정지 계정 차단)
+        unless user.active_for_authentication?
+          return render json: {
+            code: 401, type: "unauthorized",
+            message: "정지된 계정입니다. 고객센터에 문의하세요.", title: nil
+          }, status: :unauthorized
+        end
+
         token, payload = Warden::JWTAuth::UserEncoder.new.call(user, :user, nil)
         user.on_jwt_dispatch(token, payload)
         render json: user, serializer: Api::V::UserSerializer, status: :ok, access_token: token

@@ -1,12 +1,25 @@
 <% content_for :page_title, '크리에이터 관리' %>
 <div class="page-header">
   <h1>크리에이터 <span style="color:#94a3b8; font-weight:400; font-size:15px;"><%= @pagy.count %>명</span></h1>
+  <%= form_with url: admin_creators_path, method: :get, style: 'display:flex; gap:8px;' do %>
+    <input type="hidden" name="status" value="<%= params[:status] %>">
+    <input type="text" name="q" value="<%= params[:q] %>" placeholder="닉네임/유저명 검색"
+           style="padding:7px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; width:200px;">
+    <button type="submit" class="btn btn-ghost btn-sm">검색</button>
+  <% end %>
+</div>
+
+<div style="margin-bottom:16px; display:flex; gap:8px;">
+  <%= link_to "전체 #{@status_counts.values.sum}", admin_creators_path(q: params[:q]), class: "btn btn-sm #{params[:status].blank? ? 'btn-primary' : 'btn-ghost'}" %>
+  <%= link_to "승인 대기 #{@status_counts['pending'] || 0}", admin_creators_path(status: 'pending', q: params[:q]), class: "btn btn-sm #{params[:status] == 'pending' ? 'btn-primary' : 'btn-ghost'}" %>
+  <%= link_to "활성 #{@status_counts['active'] || 0}", admin_creators_path(status: 'active', q: params[:q]), class: "btn btn-sm #{params[:status] == 'active' ? 'btn-primary' : 'btn-ghost'}" %>
+  <%= link_to "비활성 #{@status_counts['inactive'] || 0}", admin_creators_path(status: 'inactive', q: params[:q]), class: "btn btn-sm #{params[:status] == 'inactive' ? 'btn-primary' : 'btn-ghost'}" %>
 </div>
 
 <div class="card">
   <table>
     <thead>
-      <tr><th>ID</th><th>닉네임</th><th>유저명</th><th>팔로워</th><th>등록일</th><th></th></tr>
+      <tr><th>ID</th><th>닉네임</th><th>유저명</th><th>상태</th><th>팔로워</th><th>등록일</th><th></th></tr>
     </thead>
     <tbody>
       <% @creators.each do |creator| %>
@@ -14,12 +27,33 @@
           <td style="color:#94a3b8; font-size:12px;"><%= creator.id %></td>
           <td><%= link_to creator.nickname, admin_creator_path(creator), style: 'color:#6366f1;' %></td>
           <td style="color:#64748b;">@<%= creator.username %></td>
+          <td>
+            <span class="badge <%= { 'pending' => 'badge-yellow', 'active' => 'badge-green', 'inactive' => 'badge-gray' }[creator.status] %>">
+              <%= { 'pending' => '승인 대기', 'active' => '활성', 'inactive' => '비활성' }[creator.status] %>
+            </span>
+          </td>
           <td><%= creator.followers_count || 0 %></td>
           <td style="color:#64748b;"><%= creator.created_at.strftime('%Y.%m.%d') %></td>
-          <td><%= link_to '보기', admin_creator_path(creator), class: 'btn btn-ghost btn-sm' %></td>
+          <td style="white-space:nowrap;">
+            <% if creator.status_pending? %>
+              <%= button_to '승인', approve_admin_creator_path(creator), method: :patch, class: 'btn btn-primary btn-sm', style: 'display:inline-block;' %>
+              <%= button_to '거절', reject_admin_creator_path(creator), method: :patch,
+                  data: { turbo_confirm: "#{creator.nickname}의 크리에이터 신청을 거절할까요?" },
+                  class: 'btn btn-danger btn-sm', style: 'display:inline-block;' %>
+            <% elsif creator.status_active? %>
+              <%= button_to '비활성화', reject_admin_creator_path(creator), method: :patch,
+                  data: { turbo_confirm: "#{creator.nickname}을 비활성화할까요?" },
+                  class: 'btn btn-ghost btn-sm', style: 'display:inline-block;' %>
+            <% else %>
+              <%= button_to '활성화', approve_admin_creator_path(creator), method: :patch, class: 'btn btn-ghost btn-sm', style: 'display:inline-block;' %>
+            <% end %>
+          </td>
         </tr>
       <% end %>
     </tbody>
   </table>
+  <% if @creators.empty? %>
+    <div class="empty-state">해당하는 크리에이터가 없습니다</div>
+  <% end %>
   <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
 </div>

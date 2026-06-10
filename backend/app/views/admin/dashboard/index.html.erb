@@ -1,5 +1,26 @@
 <% content_for :page_title, '대시보드' %>
 
+<% if @pending_creators > 0 || @unresolved_issues > 0 %>
+<div style="display:flex; gap:16px; margin-bottom:24px;">
+  <% if @pending_creators > 0 %>
+    <%= link_to admin_creators_path(status: 'pending'), style: 'flex:1; text-decoration:none;' do %>
+      <div class="stat-card" style="border-color:#fcd34d; background:#fffbeb;">
+        <div class="label" style="color:#854d0e;">⚠ 크리에이터 승인 대기</div>
+        <div class="value" style="color:#854d0e;"><%= @pending_creators %>건</div>
+      </div>
+    <% end %>
+  <% end %>
+  <% if @unresolved_issues > 0 %>
+    <%= link_to admin_issues_path, style: 'flex:1; text-decoration:none;' do %>
+      <div class="stat-card" style="border-color:#fecaca; background:#fef2f2;">
+        <div class="label" style="color:#991b1b;">⚠ 미처리 신고</div>
+        <div class="value" style="color:#991b1b;"><%= @unresolved_issues %>건</div>
+      </div>
+    <% end %>
+  <% end %>
+</div>
+<% end %>
+
 <div class="stats-grid">
   <div class="stat-card">
     <div class="label">유저</div>

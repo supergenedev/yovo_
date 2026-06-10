@@ -30,6 +30,32 @@ class User < ApplicationRecord
     CreatorUser.create!(user: self, nickname:, status: :pending)
   end
 
+  # ── 정지 (어드민) ─────────────────────────────────────────
+  def suspended?
+    suspended_at.present?
+  end
+
+  def suspend!
+    transaction do
+      update!(suspended_at: Time.current)
+      # 기발급 JWT 즉시 무효화 (revocation 전략이 Allowlist이므로 목록 삭제가 정답)
+      allowlisted_jwts.destroy_all
+    end
+  end
+
+  def unsuspend!
+    update!(suspended_at: nil)
+  end
+
+  # devise: 정지된 유저는 로그인 거부
+  def active_for_authentication?
+    super && !suspended?
+  end
+
+  def inactive_message
+    suspended? ? :suspended : super
+  end
+
   private
 
   def create_user_coin
