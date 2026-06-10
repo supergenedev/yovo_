@@ -27,9 +27,10 @@ export const useVideoStore = create<VideoState>((set, get) => ({
   hasMore: () => get().meta?.next != null,
 
   async fetchVideoPosts(page = 1) {
-    set({ loading: true })
+    set({ loading: true, ...(page === 1 ? { posts: [], meta: null } : {}) })
     try {
-      const res = await apiFetch('/api/v/feeds/discover', { query: { page } })
+      // VIDEO 탭은 영상 콘텐츠 전용 피드 (팔로우 여부 무관, video/episode만)
+      const res = await apiFetch('/api/v/feeds/videos', { query: { page } })
       set((s) => ({
         posts: page === 1 ? res.data : [...s.posts, ...res.data],
         meta: res.meta,

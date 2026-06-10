@@ -71,6 +71,7 @@ Rails.application.routes.draw do
         collection do
           get :discover
           get :creators
+          get :videos
         end
       end
       resources :follows, only: %i[create destroy] do

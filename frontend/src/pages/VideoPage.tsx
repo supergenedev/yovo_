@@ -315,12 +315,12 @@ export default function VideoPage() {
                     ) : (
                       <SgDsLibraryPostListItem
                         mediaSrc={thumbnailSrc}
-                        avatarSrc={post.creator_user?.avatar_url ?? ''}
+                        avatarSrc={post.creator_user?.profile_image ?? ''}
                         style={{ width: '100%', cursor: creatorId ? 'pointer' : undefined }}
-                        title={post.title ?? ''}
-                        initials={(post.creator_user?.username ?? 'U').slice(0, 2)}
-                        meta={`${post.creator_user?.username ?? ''} · ${timeAgo(post.created_at)}`}
-                        avatarAlt={post.creator_user?.username ?? ''}
+                        title={post.title_ko ?? post.title ?? ''}
+                        initials={(post.creator_user?.nickname ?? 'U').slice(0, 2)}
+                        meta={`${post.creator_user?.nickname ?? ''} · ${timeAgo(post.created_at)}`}
+                        avatarAlt={post.creator_user?.nickname ?? ''}
                         showAvatar={true}
                         variant="vertical"
                         avatarTone="amber"
@@ -579,7 +579,7 @@ export default function VideoPage() {
                   <SgDsLibraryStack style={{ maxWidth: '1400px' }} as="section" direction="column" gap="xs">
                     <SgDsLibrarySectionTitle
                       style={{ width: '100%' }}
-                      title={`${post?.creator_user?.username ?? ''}의 다른 작품`}
+                      title={`${post?.creator_user?.nickname ?? ''}의 다른 작품`}
                       as="header"
                       align="center"
                       iconTone="none"
@@ -620,9 +620,9 @@ export default function VideoPage() {
                           mediaSize="sm"
                           showAvatar={false}
                           thumbnailImageUrl={p.thumbnail_url ?? ''}
-                          title={p.title ?? ''}
-                          creatorName={p.creator_user?.username ?? ''}
-                          meta={`${p.views_count ?? 0} 시청 · ${timeAgo(p.created_at)}`}
+                          title={p.title_ko ?? p.title ?? ''}
+                          creatorName={p.creator_user?.nickname ?? ''}
+                          meta={`좋아요 ${p.likes_count ?? 0} · ${timeAgo(p.created_at)}`}
                           duration={p.duration ?? ''}
                           progress={0}
                           progressLabel="Media progress"

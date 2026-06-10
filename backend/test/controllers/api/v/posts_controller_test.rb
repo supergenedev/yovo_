@@ -133,6 +133,19 @@ module Api
         get "/api/v/posts/#{@post.id}"
         assert_response :unauthorized
       end
+
+      test "feeds/videos returns only video and episode posts regardless of follow" do
+        @post.update!(content_type: :video) # published_post를 영상으로
+        text_post = Post.create!(creator_user: creator_users(:alice_creator), title_ko: "텍스트", status: :published, content_type: :text, view_type: :everyone)
+
+        get "/api/v/feeds/videos", headers: @headers
+        assert_response :success
+
+        types = response.parsed_body["data"].map { |p| p["content_type"] }
+        assert_includes types, "video"
+        assert types.all? { |t| %w[video episode].include?(t) }, "video/episode 외 타입이 섞이면 안 된다: #{types}"
+        refute_includes response.parsed_body["data"].map { |p| p["id"] }, text_post.id.to_s
+      end
     end
   end
 end

@@ -94,8 +94,8 @@ export default function VideoMainPage() {
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase()
       result = result.filter((p) => {
-        const title = (p.title ?? '').toLowerCase()
-        const creator = (p.creator_user?.username ?? '').toLowerCase()
+        const title = (p.title_ko ?? p.title ?? '').toLowerCase()
+        const creator = (p.creator_user?.nickname ?? '').toLowerCase()
         return title.includes(q) || creator.includes(q)
       })
     }
@@ -104,7 +104,7 @@ export default function VideoMainPage() {
     if (sortKey === 'latest') {
       result.sort((a, b) => Number(b.created_at) - Number(a.created_at))
     } else if (sortKey === 'popular') {
-      result.sort((a, b) => (b.views_count ?? 0) - (a.views_count ?? 0))
+      result.sort((a, b) => (b.likes_count ?? 0) - (a.likes_count ?? 0))
     }
 
     return result
@@ -190,7 +190,7 @@ export default function VideoMainPage() {
               itemSize="custom"
               count={featuredPosts.length}
               cols="3"
-              arrows={false}
+              arrows
               layout="row"
               gap="lg"
               scroll="smooth"
@@ -271,7 +271,7 @@ export default function VideoMainPage() {
             itemSizeOverride="400px"
             layout="row"
             gap="lg"
-            arrows={false}
+            arrows
             edgeFade="fade"
             scroll="snap"
           >
@@ -306,19 +306,19 @@ export default function VideoMainPage() {
                 </SgDsLibraryText>
                 <SgDsLibraryVideoListCard
                   thumbnailImageUrl={getPostThumbnail(p)}
-                  title={p.title ?? ''}
-                  creatorName={p.creator_user?.username ?? ''}
-                  meta={`${p.views_count ?? 0} 시청 · ${timeAgo(p.created_at)}`}
+                  title={p.title_ko ?? p.title ?? ''}
+                  creatorName={p.creator_user?.nickname ?? ''}
+                  meta={`좋아요 ${p.likes_count ?? 0} · ${timeAgo(p.created_at)}`}
                   duration={p.duration ?? ''}
                   progress={0}
                   progressLabel="Media progress"
                   actionLabel="More options"
                   actionSize="sm"
                   thumbnailAspect="16/9"
-                  avatarSrc={p.creator_user?.avatar_url ?? ''}
-                  avatarAlt={p.creator_user?.username ?? ''}
-                  avatarInitials={(p.creator_user?.username ?? 'U').slice(0, 2)}
-                  creatorVerified={p.creator_user?.verified ?? false}
+                  avatarSrc={p.creator_user?.profile_image ?? ''}
+                  avatarAlt={p.creator_user?.nickname ?? ''}
+                  avatarInitials={(p.creator_user?.nickname ?? 'U').slice(0, 2)}
+                  creatorVerified={p.creator_user?.creator_type === 'official'}
                   showGrain={true}
                   variant="vertical"
                   avatarTone="brand"
@@ -406,18 +406,18 @@ export default function VideoMainPage() {
                 key={p.id}
                 mediaSize="sm"
                 thumbnailImageUrl={getPostThumbnail(p)}
-                title={p.title ?? ''}
-                creatorName={p.creator_user?.username ?? ''}
-                meta={`${p.views_count ?? 0} 시청 · ${timeAgo(p.created_at)}`}
+                title={p.title_ko ?? p.title ?? ''}
+                creatorName={p.creator_user?.nickname ?? ''}
+                meta={`좋아요 ${p.likes_count ?? 0} · ${timeAgo(p.created_at)}`}
                 duration={p.duration ?? ''}
                 progress={0}
                 actionLabel="More options"
                 actionSize="sm"
                 thumbnailAspect="16/9"
-                avatarSrc={p.creator_user?.avatar_url ?? ''}
-                avatarAlt={p.creator_user?.username ?? ''}
-                avatarInitials={(p.creator_user?.username ?? 'U').slice(0, 2)}
-                creatorVerified={p.creator_user?.verified ?? false}
+                avatarSrc={p.creator_user?.profile_image ?? ''}
+                avatarAlt={p.creator_user?.nickname ?? ''}
+                avatarInitials={(p.creator_user?.nickname ?? 'U').slice(0, 2)}
+                creatorVerified={p.creator_user?.creator_type === 'official'}
                 showGrain={true}
                 variant="vertical"
                 avatarTone="brand"
