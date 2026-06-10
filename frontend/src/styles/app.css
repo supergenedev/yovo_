@@ -1,0 +1,67 @@
+/* ── 워크벤치 런타임 셰임 ─────────────────────────────────────────
+ * 디자인 시스템 페이지/컴포넌트가 참조하는 워크벤치 전용 변수와
+ * data-wb-* 속성을 독립 앱에서 동작하도록 별칭으로 제공한다. */
+
+:root {
+  --ds-spacing-space-0: var(--ds-token-sg-ds-library-primitives-space-0, 0);
+  --ds-spacing-space-1: var(--ds-token-sg-ds-library-primitives-space-1, 0.25rem);
+  --ds-spacing-space-2: var(--ds-token-sg-ds-library-primitives-space-2, 0.5rem);
+  --ds-spacing-space-3: var(--ds-token-sg-ds-library-primitives-space-3, 0.75rem);
+  --ds-spacing-space-4: var(--ds-token-sg-ds-library-primitives-space-4, 1rem);
+  --ds-spacing-space-5: var(--ds-token-sg-ds-library-primitives-space-5, 1.25rem);
+  --ds-spacing-space-6: var(--ds-token-sg-ds-library-primitives-space-6, 1.5rem);
+  --ds-spacing-space-8: var(--ds-token-sg-ds-library-primitives-space-8, 2rem);
+  --ds-spacing-space-10: var(--ds-token-sg-ds-library-primitives-space-10, 2.5rem);
+  --ds-spacing-space-12: var(--ds-token-sg-ds-library-primitives-space-12, 3rem);
+
+  --wb-spacing-space-2: var(--ds-spacing-space-2);
+  --wb-spacing-space-3: var(--ds-spacing-space-3);
+  --wb-spacing-space-4: var(--ds-spacing-space-4);
+  --wb-spacing-space-6: var(--ds-spacing-space-6);
+  --wb-spacing-space-8: var(--ds-spacing-space-8);
+}
+
+/* 워크벤치가 적용해 주던 배경 토큰 속성 매핑 */
+[data-wb-bg-token='surface-page'] {
+  background: var(--ds-token-sg-ds-library-semantic-color-surface-page);
+}
+[data-wb-bg-token='surface-card'] {
+  background: var(--ds-token-sg-ds-library-semantic-color-surface-card);
+}
+[data-wb-bg-token='surface-raised'] {
+  background: var(--ds-token-sg-ds-library-semantic-color-surface-raised);
+}
+[data-wb-bg-token='surface-sunken'] {
+  background: var(--ds-token-sg-ds-library-semantic-color-surface-sunken);
+}
+
+/* ── 앱 베이스 ─────────────────────────────────────────────── */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family:
+    'Pretendard Variable',
+    Pretendard,
+    -apple-system,
+    BlinkMacSystemFont,
+    system-ui,
+    Roboto,
+    'Helvetica Neue',
+    'Segoe UI',
+    'Apple SD Gothic Neo',
+    'Noto Sans KR',
+    sans-serif;
+  background: var(--ds-token-sg-ds-library-semantic-color-surface-page);
+  color: var(--ds-token-sg-ds-library-semantic-color-text-primary);
+  -webkit-font-smoothing: antialiased;
+}

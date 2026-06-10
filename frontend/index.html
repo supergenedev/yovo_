@@ -1,13 +1,15 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/workbench-assets/icons/symbol-mpks329n.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>YOVO</title>
   </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
+  <!-- sg-ds-library.css의 모든 규칙은 .sg-ds-library-scope 자손 셀렉터로 스코프되어 있다.
+       워크벤치에서는 프리뷰 컨테이너가 이 클래스를 제공했으므로, 독립 앱에서는 body가 그 역할을 한다. -->
+  <body class="sg-ds-library-scope">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
