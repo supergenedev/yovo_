@@ -78,6 +78,57 @@ module Api
         assert_response :bad_request
       end
 
+      test "purchase is idempotent — repeat call charges only once" do
+        locked = posts(:published_post)
+        locked.update!(view_type: :buyer_only, content_price: 50)
+        user_coins(:bob_coin).update!(coin: 100)
+
+        post "/api/v/posts/#{locked.id}/purchase", headers: @headers
+        assert_response :success
+        assert_equal 50, user_coins(:bob_coin).reload.coin
+
+        post "/api/v/posts/#{locked.id}/purchase", headers: @headers
+        assert_response :success
+        assert_equal 50, user_coins(:bob_coin).reload.coin, "재구매 호출 시 코인이 또 차감되면 안 된다"
+        assert_equal 1, UserCoinHistory.where(user: @user, target: locked, history_type: "purchase").count
+      end
+
+      test "purchase records coin history and appears in purchased list" do
+        locked = posts(:published_post)
+        locked.update!(view_type: :buyer_only, content_price: 30)
+        user_coins(:bob_coin).update!(coin: 100)
+
+        post "/api/v/posts/#{locked.id}/purchase", headers: @headers
+        assert_response :success
+        assert response.parsed_body.dig("post", "interaction_with_me", "purchased")
+
+        get "/api/v/me/posts", params: { filter: "purchased" }, headers: @headers
+        assert_response :success
+        ids = response.parsed_body["data"].map { |p| p["id"] }
+        assert_includes ids, locked.id.to_s, "구매한 포스트가 구매 목록에 나와야 한다"
+      end
+
+      test "batch_seen marks posts seen but does NOT unlock paid media" do
+        locked = posts(:published_post)
+        locked.update!(view_type: :buyer_only, content_price: 50)
+        locked.media.attach(io: StringIO.new("paid"), filename: "paid.mp4", content_type: "video/mp4")
+
+        post "/api/v/posts/batch_seen", params: { post_ids: [ locked.id ] }, headers: @headers, as: :json
+        assert_response :success
+        assert PostSeen.exists?(user: @user, post_id: locked.id)
+
+        get "/api/v/posts/#{locked.id}", headers: @headers
+        body = response.parsed_body["post"]
+        assert body.dig("interaction_with_me", "seen")
+        assert_equal [], body["media"], "batch_seen으로 유료 미디어가 잠금 해제되면 안 된다 (구매 우회)"
+      end
+
+      test "batch_get returns posts for given ids" do
+        post "/api/v/posts/batch_get", params: { post_ids: [ @post.id ] }, headers: @headers, as: :json
+        assert_response :success
+        assert_equal [ @post.id.to_s ], response.parsed_body["data"].map { |p| p["id"] }
+      end
+
       test "show requires authentication" do
         get "/api/v/posts/#{@post.id}"
         assert_response :unauthorized

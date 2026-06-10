@@ -19,7 +19,8 @@ module Api
         if params[:filter] == "saved"
           posts = current_user.bookmarked_posts
         elsif params[:filter] == "purchased"
-          post_ids = UserCoinHistory.where(user: current_user, target_type: "Post").pluck(:target_id)
+          # 팁(history_type: tip)도 target이 Post라서 history_type으로 구매만 거른다
+          post_ids = UserCoinHistory.where(user: current_user, target_type: "Post", history_type: "purchase").pluck(:target_id)
           posts = Post.where(id: post_ids)
         else
           raise ActionController::BadRequest, "Invalid filter"

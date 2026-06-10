@@ -2,12 +2,12 @@ module Api
   module V
     class FeedsController < ApplicationController
       def index
-        posts = Post.feed_following(current_user)
+        posts = Post.feed_following(current_user).includes(:creator_user, media_attachments: :blob)
         render_with_pagy(collection: posts, serializer: PostSerializer, page: params[:page], limit: params[:items])
       end
 
       def discover
-        posts = Post.feed_discover(current_user)
+        posts = Post.feed_discover(current_user).includes(:creator_user, media_attachments: :blob)
         render_with_pagy(collection: posts, serializer: PostSerializer, page: params[:page], limit: params[:items])
       end
 

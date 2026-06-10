@@ -32,16 +32,26 @@ module Api
           liked:     PostLike.exists?(user_id: scope.id, post_id: object.id),
           bookmarked: Bookmark.exists?(user_id: scope.id, post_id: object.id),
           seen:      PostSeen.exists?(user_id: scope.id, post_id: object.id),
+          purchased: purchased?,
         }
       end
 
       private
 
+      # 잠금 해제 기준은 구매 기록(UserCoinHistory)이다.
+      # PostSeen은 batch_seen 등으로 무료 생성될 수 있으므로 기준으로 쓰면 우회된다.
+      def purchased?
+        return false unless scope
+        UserCoinHistory.exists?(
+          user_id: scope.id, target_type: "Post", target_id: object.id, history_type: "purchase",
+        )
+      end
+
       def media_visible?
         return true unless object.view_type_buyer_only?
         return false unless scope
         return true if object.creator_user.user_id == scope.id
-        PostSeen.exists?(user_id: scope.id, post_id: object.id)
+        purchased?
       end
     end
   end
