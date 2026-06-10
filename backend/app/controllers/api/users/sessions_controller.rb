@@ -1,6 +1,6 @@
 module Api
   module Users
-    class SessionsController < ::ApplicationController
+    class SessionsController < ActionController::API
       def create
         user = User.find_for_database_authentication(email: params.dig(:user, :email))
 

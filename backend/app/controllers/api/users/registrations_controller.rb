@@ -1,6 +1,6 @@
 module Api
   module Users
-    class RegistrationsController < ::ApplicationController
+    class RegistrationsController < ActionController::API
       def create
         user = User.new(sign_up_params)
 
