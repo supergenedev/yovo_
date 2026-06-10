@@ -421,6 +421,7 @@ export default function MainPage() {
                           liked={interactionsStore.isLiked(post.id)}
                           onLikeClick={() => interactionsStore.toggleLike(post.id)}
                           onCommentClick={() => navigate('/video/' + post.id)}
+                          onContentClick={() => navigate('/video/' + post.id)}
                           onShareClick={() => handleShare(post)}
                           onSupportClick={() => { setTipDialogPostId(String(post.id)); setTipAmount('100') }}
                           onUserClick={() => navigate('/creator/' + post.creator_user?.id)}
@@ -489,6 +490,7 @@ export default function MainPage() {
                       liked={interactionsStore.isLiked(post.id)}
                       onLikeClick={() => interactionsStore.toggleLike(post.id)}
                       onCommentClick={() => navigate('/video/' + post.id)}
+                          onContentClick={() => navigate('/video/' + post.id)}
                       onShareClick={() => handleShare(post)}
                       onSupportClick={() => { setTipDialogPostId(String(post.id)); setTipAmount('100') }}
                       onUserClick={() => navigate('/creator/' + post.creator_user?.id)}
@@ -532,6 +534,7 @@ export default function MainPage() {
                       liked={interactionsStore.isLiked(post.id)}
                       onLikeClick={() => interactionsStore.toggleLike(post.id)}
                       onCommentClick={() => navigate('/video/' + post.id)}
+                          onContentClick={() => navigate('/video/' + post.id)}
                       onShareClick={() => handleShare(post)}
                       onSupportClick={() => { setTipDialogPostId(String(post.id)); setTipAmount('100') }}
                       onUserClick={() => navigate('/creator/' + post.creator_user?.id)}

@@ -73,6 +73,8 @@ export type SgDsLibraryPostCardProps = Omit<HTMLAttributes<HTMLElement>, 'childr
   onSupportClick?: () => void;
   onMoreClick?: () => void;
   onUserClick?: () => void;
+  /** 본문(제목/내용/미디어) 클릭 — 상세 이동용. 액션 버튼들과는 분리됨 */
+  onContentClick?: () => void;
 };
 
 export function SgDsLibraryPostCard(rawProps: SgDsLibraryPostCardProps) {
@@ -114,6 +116,7 @@ export function SgDsLibraryPostCard(rawProps: SgDsLibraryPostCardProps) {
   onSupportClick,
   onMoreClick,
   onUserClick,
+  onContentClick,
   ...props
 } = resolveWorkbenchModeProps(rawProps);
   const hasText = Boolean(title || prose);
@@ -161,7 +164,11 @@ export function SgDsLibraryPostCard(rawProps: SgDsLibraryPostCardProps) {
       </header>
 
       {hasText ? (
-        <div className="post-card-text">
+        <div
+          className="post-card-text"
+          onClick={onContentClick}
+          style={onContentClick ? { cursor: 'pointer' } : undefined}
+        >
           {title ? <h2 className="post-card-title">{title}</h2> : null}
           {prose ? (
             <p
@@ -175,16 +182,22 @@ export function SgDsLibraryPostCard(rawProps: SgDsLibraryPostCardProps) {
       ) : null}
 
       {imageUrl && !resolvedBodySlot ? (
-        <SgDsLibraryMediaFrame
-          aspect={imageAspect}
-          captionEyebrow=""
-          captionTitle=""
-          imageUrl={imageUrl}
-          showPlay={kind === 'live' || kind === 'video'}
-        />
+        <div onClick={onContentClick} style={onContentClick ? { cursor: 'pointer' } : undefined}>
+          <SgDsLibraryMediaFrame
+            aspect={imageAspect}
+            captionEyebrow=""
+            captionTitle=""
+            imageUrl={imageUrl}
+            showPlay={kind === 'live' || kind === 'video'}
+          />
+        </div>
       ) : null}
 
-      {resolvedBodySlot}
+      {resolvedBodySlot ? (
+        <div onClick={onContentClick} style={onContentClick ? { cursor: 'pointer' } : undefined}>
+          {resolvedBodySlot}
+        </div>
+      ) : null}
 
       {children}
 

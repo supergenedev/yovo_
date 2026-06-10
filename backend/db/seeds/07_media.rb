@@ -84,4 +84,13 @@ end
   attach_media(post, image, content_type: "image/jpeg")
 end
 
+# ── 나머지 모든 video/episode 포스트에도 샘플 영상 첨부 ──
+# (영상 타입인데 파일이 없으면 상세에서 재생할 게 없다)
+samples = [ video1, video2, video3 ].compact
+if samples.any?
+  Post.where(content_type: %i[video episode]).find_each.with_index do |post, i|
+    attach_media(post, samples[i % samples.size], content_type: "video/mp4")
+  end
+end
+
 puts "[Seeds] 미디어 첨부 완료 (영상 포스트 #{Post.content_video.count}개, 첨부 #{ActiveStorage::Attachment.count}건)"
