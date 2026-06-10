@@ -264,6 +264,15 @@ Devise.setup do |config|
   #
   # The "*/*" below is required to match Internet Explorer requests.
   # config.navigational_formats = ['*/*', :html, :turbo_stream]
+  #
+  # 기본값의 "*/*" 때문에 Accept 헤더 없는 API 요청이 401 대신 sign_in으로
+  # 302 리다이렉트된다. HTML 내비게이션만 리다이렉트하도록 제한한다.
+  config.navigational_formats = [:html, :turbo_stream]
+
+  # /api/* 는 Accept 헤더와 무관하게 항상 401 JSON으로 응답한다.
+  config.warden do |manager|
+    manager.failure_app = ApiAwareFailureApp
+  end
 
   # The default HTTP method used to sign out a resource. Default is :delete.
   config.sign_out_via = :delete
