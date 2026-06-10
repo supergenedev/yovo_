@@ -1,0 +1,198 @@
+---
+# ActiveStorage 업로드 파일용 PVC (EBS gp3, 5GB)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: yovo-storage-pvc
+  namespace: yovo-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ebs-gp3
+  resources:
+    requests:
+      storage: 5Gi
+---
+# Backend (Rails API) Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yovo-backend
+  namespace: yovo-dev
+  labels:
+    app: yovo-backend
+spec:
+  replicas: 1
+  # RWO PVC를 물고 있으므로 RollingUpdate 시 신규 파드가 볼륨을 못 받아
+  # 교착될 수 있다 → Recreate
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: yovo-backend
+  template:
+    metadata:
+      labels:
+        app: yovo-backend
+    spec:
+      containers:
+        - name: backend
+          image: 414140062450.dkr.ecr.ap-northeast-1.amazonaws.com/yovo:backend
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          envFrom:
+            - secretRef:
+                name: yovo-env
+          env:
+            - name: RAILS_ENV
+              value: "production"
+            - name: RAILS_LOG_TO_STDOUT
+              value: "true"
+          volumeMounts:
+            - name: storage
+              mountPath: /rails/storage
+          resources:
+            requests:
+              cpu: "256m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /up
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /up
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 20
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: yovo-storage-pvc
+---
+# Web (nginx + React 정적 빌드) Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yovo-web
+  namespace: yovo-dev
+  labels:
+    app: yovo-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: yovo-web
+  template:
+    metadata:
+      labels:
+        app: yovo-web
+    spec:
+      containers:
+        - name: web
+          image: 414140062450.dkr.ecr.ap-northeast-1.amazonaws.com/yovo:web
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "128m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 20
+---
+# Backend Service
+# 이름이 "backend"인 이유: frontend nginx.conf가 docker-compose와 동일하게
+# http://backend:80 으로 프록시하기 때문 (/api, /rails, /up 중계)
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: yovo-dev
+  labels:
+    app: yovo-backend
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /up
+spec:
+  selector:
+    app: yovo-backend
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: ClusterIP
+---
+# Web Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: yovo-web
+  namespace: yovo-dev
+  labels:
+    app: yovo-web
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+spec:
+  selector:
+    app: yovo-web
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: ClusterIP
+---
+# Ingress (ALB)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: yovo-ingress
+  namespace: yovo-dev
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443, "HTTP": 80}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-1:414140062450:certificate/caf906c6-4a4f-4267-ac2f-24f38ce913d6
+    alb.ingress.kubernetes.io/group.name: yovo-dev
+spec:
+  ingressClassName: alb
+  rules:
+    - host: yovo-api-dev.al-pha.ai
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 80
+    - host: yovo-web-dev.al-pha.ai
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: yovo-web
+                port:
+                  number: 80
