@@ -1,7 +1,9 @@
 import { ofetch, type FetchOptions } from 'ofetch'
 import { useAuthStore } from '@/stores/auth'
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+// 기본은 같은 오리진(상대 경로) — dev는 vite 프록시, 운영은 nginx가 /api·/rails를
+// backend로 중계한다. 별도 API 도메인을 쓸 때만 VITE_API_BASE_URL을 지정.
+const baseURL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 // Rails API 클라이언트. JWT는 auth 스토어에서 읽어 Bearer 헤더로 전달하고,
 // 401 응답이면 토큰을 폐기한다 (라우터 가드가 /auth로 보냄).

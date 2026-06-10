@@ -9,6 +9,12 @@ services:
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
       RAILS_LOG_TO_STDOUT: "true"
       RAILS_LOG_LEVEL: ${RAILS_LOG_LEVEL:-info}
+      # CORS 허용 오리진 (콤마 구분). 미설정 시 전체 허용(*) — 운영에서는 반드시 설정
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      # 서비스 도메인 — 메일/절대 URL 생성에 사용 (예: yovo.example.com)
+      APP_HOST: ${APP_HOST:-}
+      # ALB/CloudFront 등에서 TLS 종료 시 true — HTTPS 리다이렉트 + secure 쿠키
+      FORCE_SSL: ${FORCE_SSL:-false}
     volumes:
       - storage:/rails/storage
     restart: unless-stopped
@@ -22,6 +28,10 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        # 기본은 같은 오리진(빈 값) — nginx가 /api·/rails를 backend로 프록시.
+        # API를 별도 도메인으로 분리할 때만 지정 (예: https://api.yovo.example.com)
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
     ports:
       - "80:80"
     depends_on:
