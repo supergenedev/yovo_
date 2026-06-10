@@ -1,0 +1,13 @@
+published_post:
+  creator_user: alice_creator
+  title_ko: 테스트 포스트
+  status: 1
+  content_type: 0
+  view_type: 0
+
+draft_post:
+  creator_user: alice_creator
+  title_ko: 초안 포스트
+  status: 0
+  content_type: 0
+  view_type: 0

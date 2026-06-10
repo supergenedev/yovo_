@@ -1,0 +1,7 @@
+alice_coin:
+  user: alice
+  coin: 0
+
+bob_coin:
+  user: bob
+  coin: 0

@@ -1,0 +1,11 @@
+alice:
+  email: alice@example.com
+  encrypted_password: <%= Devise::Encryptor.digest(User, "password123") %>
+  nickname: Alice
+  jti: 00000000-0000-0000-0000-000000000001
+
+bob:
+  email: bob@example.com
+  encrypted_password: <%= Devise::Encryptor.digest(User, "password123") %>
+  nickname: Bob
+  jti: 00000000-0000-0000-0000-000000000002

@@ -1,0 +1,5 @@
+alice_creator:
+  user: alice
+  nickname: AliceCreator
+  status: 1
+  creator_type: 0
