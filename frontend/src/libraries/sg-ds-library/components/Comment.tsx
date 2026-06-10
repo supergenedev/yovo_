@@ -18,6 +18,11 @@ export type SgDsLibraryCommentProps = HTMLAttributes<HTMLDivElement> & {
   replyCount?: number | string;
   time?: ReactNode;
   verified?: boolean;
+  /* 인터랙션 콜백 — 미전달 시 표시 전용 */
+  onLikeClick?: () => void;
+  onReplyClick?: () => void;
+  onFlagClick?: () => void;
+  onMoreClick?: () => void;
 };
 
 export function SgDsLibraryComment(rawProps: SgDsLibraryCommentProps) {
@@ -36,6 +41,10 @@ export function SgDsLibraryComment(rawProps: SgDsLibraryCommentProps) {
   replyCount,
   time,
   verified = false,
+  onLikeClick,
+  onReplyClick,
+  onFlagClick,
+  onMoreClick,
   ...props
 } = resolveWorkbenchModeProps(rawProps);
   const resolvedBody = body ?? comment;
@@ -66,14 +75,18 @@ export function SgDsLibraryComment(rawProps: SgDsLibraryCommentProps) {
             className={liked ? 'is-liked' : ''}
             variant="ghost"
             size="sm"
-            leadingIcon={liked ? 'heart' : 'heart'}
+            leadingIcon="heart"
+            style={liked ? { color: 'var(--p-color-brand-500, #ff0055)' } : undefined}
+            aria-pressed={liked}
             label={typeof likeCount === 'undefined' ? '좋아요' : String(likeCount)}
+            onClick={onLikeClick}
           />
           <SgDsLibraryButton
             variant="ghost"
             size="sm"
             leadingIcon="corner-down-right"
             label={typeof replyCount === 'undefined' || replyCount === 0 ? '답글' : `답글 ${replyCount}`}
+            onClick={onReplyClick}
           />
           <SgDsLibraryButton
             variant="ghost"
@@ -81,6 +94,7 @@ export function SgDsLibraryComment(rawProps: SgDsLibraryCommentProps) {
             iconOnly
             leadingIcon="flag"
             aria-label="신고"
+            onClick={onFlagClick}
           />
           <SgDsLibraryButton
             variant="ghost"
@@ -88,6 +102,7 @@ export function SgDsLibraryComment(rawProps: SgDsLibraryCommentProps) {
             iconOnly
             leadingIcon="ellipsis"
             aria-label="더보기"
+            onClick={onMoreClick}
           />
         </div>
       </div>

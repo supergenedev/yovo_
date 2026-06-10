@@ -80,10 +80,10 @@ export default function CreatorProfilePage() {
         method: 'POST',
         body: { creator_user_id: currentCreator.id },
       })
-    } catch {
-      // ignore
+      navigate('/dm')
+    } catch (e) {
+      console.error('handleDm error:', e)
     }
-    navigate('/dm')
   }
 
   if (creatorLoading || !currentCreator) {
@@ -259,6 +259,9 @@ export default function CreatorProfilePage() {
                     thumbnailBackground="linear-gradient(140deg, #0c1429, #4c1d95 50%, #be185d)"
                     actionIcon="ellipsis"
                     showAction={true}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate('/video/' + post.id)}
+                    onActionClick={() => navigator.clipboard.writeText(location.origin + '/video/' + post.id)}
                   />
                 ))}
               </SgDsLibraryCardGrid>

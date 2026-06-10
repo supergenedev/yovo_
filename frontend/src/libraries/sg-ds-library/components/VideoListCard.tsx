@@ -18,6 +18,9 @@ export type SgDsLibraryVideoListCardProps = Omit<HTMLAttributes<HTMLElement>, 't
   actionIcon?: string;
   actionLabel?: string;
   actionSize?: SgDsLibraryButtonSize;
+  /* 인터랙션 콜백 — 카드 자체 onClick과 분리해 stopPropagation 처리됨 */
+  onAvatarClick?: () => void;
+  onActionClick?: () => void;
   avatarAlt?: string;
   avatarInitials?: string;
   avatarShape?: SgDsLibraryAvatarShape;
@@ -60,6 +63,8 @@ export function SgDsLibraryVideoListCard(rawProps: SgDsLibraryVideoListCardProps
     actionIcon = 'ellipsis',
     actionLabel = 'More options',
     actionSize,
+    onAvatarClick,
+    onActionClick,
     avatarAlt = '',
     avatarInitials = '코다',
     avatarShape = 'circle',
@@ -151,6 +156,8 @@ export function SgDsLibraryVideoListCard(rawProps: SgDsLibraryVideoListCardProps
             size={resolvedAvatarSize}
             src={avatarSrc}
             tone={avatarTone}
+            onClick={onAvatarClick ? (e) => { e.stopPropagation(); onAvatarClick() } : undefined}
+            style={onAvatarClick ? { cursor: 'pointer' } : undefined}
           />
         ) : null}
         <div className="video-list-card-body">
@@ -194,6 +201,7 @@ export function SgDsLibraryVideoListCard(rawProps: SgDsLibraryVideoListCardProps
             leadingIcon={actionIcon}
             size={resolvedActionSize}
             variant="ghost"
+            onClick={onActionClick ? (e) => { e.stopPropagation(); onActionClick() } : undefined}
           >
             {actionLabel}
           </SgDsLibraryButton>

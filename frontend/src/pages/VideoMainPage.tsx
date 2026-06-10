@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   SgDsLibrarySectionTitle,
@@ -29,13 +29,86 @@ function timeAgo(ms?: number | string | null): string {
   return hours < 24 ? `${hours}시간 전` : `${Math.floor(hours / 24)}일 전`
 }
 
+type SortKey = 'latest' | 'popular'
+
+const CATEGORIES = ['전체', '보이스드라마', '시네마틱', 'ASMR', '단편영상', '애니메이션', 'MV', 'Vlog'] as const
+type Category = typeof CATEGORIES[number]
+
+const CATEGORY_ICONS: Record<Category, string> = {
+  '전체': 'layout-grid',
+  '보이스드라마': 'headphones',
+  '시네마틱': 'clapperboard',
+  'ASMR': 'ear',
+  '단편영상': 'film',
+  '애니메이션': 'sparkles',
+  'MV': 'play',
+  'Vlog': 'video',
+}
+
+function getPostThumbnail(p: any): string {
+  const imageMedia = p.media?.find((m: any) => m.content_type?.startsWith('image/'))
+  return imageMedia?.url ?? p.thumbnail_url ?? ''
+}
+
 export default function VideoMainPage() {
   const navigate = useNavigate()
   const { posts, loading, fetchVideoPosts, loadMore, hasMore } = useVideoStore()
 
+  const [activeCategory, setActiveCategory] = useState<Category>('전체')
+  const [sortKey, setSortKey] = useState<SortKey>('latest')
+  const [sortLabel, setSortLabel] = useState('최신순')
+  const [searchQuery, setSearchQuery] = useState('')
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
     fetchVideoPosts()
   }, [])
+
+  function handleSearchChange(value: string) {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      setSearchQuery(value)
+    }, 300)
+  }
+
+  function handleSort(key: SortKey, label: string) {
+    setSortKey(key)
+    setSortLabel(label)
+  }
+
+  const filteredPosts = useMemo(() => {
+    let result = [...posts]
+
+    // category filter
+    if (activeCategory !== '전체') {
+      result = result.filter((p) => {
+        const cat = p.category ?? ''
+        return cat === activeCategory
+      })
+    }
+
+    // search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase()
+      result = result.filter((p) => {
+        const title = (p.title ?? '').toLowerCase()
+        const creator = (p.creator_user?.username ?? '').toLowerCase()
+        return title.includes(q) || creator.includes(q)
+      })
+    }
+
+    // sort
+    if (sortKey === 'latest') {
+      result.sort((a, b) => Number(b.created_at) - Number(a.created_at))
+    } else if (sortKey === 'popular') {
+      result.sort((a, b) => (b.views_count ?? 0) - (a.views_count ?? 0))
+    }
+
+    return result
+  }, [posts, activeCategory, sortKey, searchQuery])
+
+  // Featured strip: use real posts count (up to 6)
+  const featuredPosts = posts.slice(0, Math.min(posts.length, 6))
 
   return (
     <SgDsLibraryStack
@@ -100,55 +173,58 @@ export default function VideoMainPage() {
                 placeholder="제목, 크리에이터, 태그 검색"
                 leadingIcon="search"
                 size="md"
+                onChange={(e) => handleSearchChange(e.target.value)}
               />
             </SgDsLibrarySectionTitleGroup>
           </SgDsLibrarySectionTitle>
 
-          {/* Featured media strip - dummy (no backend endpoint for curated picks) */}
-          <SgDsLibraryCardGrid
-            itemProps={posts.slice(0, 6).map((p) => ({ src: p.thumbnail_url ?? '' }))}
-            itemSizeOverride="640px"
-            shadow={false}
-            itemSize="custom"
-            count="6"
-            cols="3"
-            arrows={false}
-            layout="row"
-            gap="lg"
-            scroll="smooth"
-            itemAspectRatio="16 / 9"
-            edgeFade="fade"
-          >
-            {posts.slice(0, 1).map((p) => (
-              <SgDsLibraryMediaFrame
-                key={p.id}
-                style={{ width: '100%', height: 'fit-content', cursor: 'pointer' }}
-                live={false}
-                src={p.thumbnail_url ?? ''}
-                locked={false}
-                duration={p.duration ?? ''}
-                progress={0}
-                progressLabel="Media progress"
-                playLabel="Play"
-                liveLabel="LIVE"
-                aspect="16/9"
-                badgeVariant="solid"
-                badgeStatus="danger"
-                lockIcon="lock"
-                lockActionVariant="primary"
-                lockActionSize="sm"
-                lockActionShape="pill"
-                showPlay={true}
-                showGrain={true}
-                size="md"
-                background="linear-gradient(140deg, #0c1429, #4c1d95 50%, #be185d)"
-                onClick={() => navigate(`/video/${p.id}`)}
-              />
-            ))}
-          </SgDsLibraryCardGrid>
+          {/* Featured media strip - real data */}
+          {featuredPosts.length > 0 && (
+            <SgDsLibraryCardGrid
+              itemProps={featuredPosts.map((p) => ({ src: getPostThumbnail(p) }))}
+              itemSizeOverride="640px"
+              shadow={false}
+              itemSize="custom"
+              count={featuredPosts.length}
+              cols="3"
+              arrows={false}
+              layout="row"
+              gap="lg"
+              scroll="smooth"
+              itemAspectRatio="16 / 9"
+              edgeFade="fade"
+            >
+              {featuredPosts.map((p) => (
+                <SgDsLibraryMediaFrame
+                  key={p.id}
+                  style={{ width: '100%', height: 'fit-content', cursor: 'pointer' }}
+                  live={false}
+                  src={getPostThumbnail(p)}
+                  locked={false}
+                  duration={p.duration ?? ''}
+                  progress={0}
+                  progressLabel="Media progress"
+                  playLabel="Play"
+                  liveLabel="LIVE"
+                  aspect="16/9"
+                  badgeVariant="solid"
+                  badgeStatus="danger"
+                  lockIcon="lock"
+                  lockActionVariant="primary"
+                  lockActionSize="sm"
+                  lockActionShape="pill"
+                  showPlay={true}
+                  showGrain={true}
+                  size="md"
+                  background="linear-gradient(140deg, #0c1429, #4c1d95 50%, #be185d)"
+                  onClick={() => navigate(`/video/${p.id}`)}
+                />
+              ))}
+            </SgDsLibraryCardGrid>
+          )}
         </SgDsLibraryStack>
 
-        {/* 실시간 TOP 10 - dummy (no ranking endpoint) */}
+        {/* 실시간 TOP 10 */}
         <SgDsLibraryStack style={{ maxWidth: '1400px' }} as="section" direction="column" gap="sm">
           <SgDsLibrarySectionTitle
             style={{ width: '100%' }}
@@ -169,26 +245,25 @@ export default function VideoMainPage() {
               <SgDsLibraryButtonPopover
                 trailingIcon="chevron-down"
                 placement="bottom-end"
-                buttonLabel="최신순"
+                buttonLabel={sortLabel}
                 buttonShape="default"
                 buttonSize="sm"
                 buttonVariant="ghost"
                 closeOnItemClick={true}
               >
                 <SgDsLibraryPopoverList>
-                  <SgDsLibraryPopoverItem icon="clock">최신순</SgDsLibraryPopoverItem>
-                  <SgDsLibraryPopoverItem icon="flame">인기순</SgDsLibraryPopoverItem>
-                  <SgDsLibraryPopoverItem icon="sparkles">추천순</SgDsLibraryPopoverItem>
+                  <SgDsLibraryPopoverItem icon="clock" onClick={() => handleSort('latest', '최신순')}>최신순</SgDsLibraryPopoverItem>
+                  <SgDsLibraryPopoverItem icon="flame" onClick={() => handleSort('popular', '인기순')}>인기순</SgDsLibraryPopoverItem>
                 </SgDsLibraryPopoverList>
               </SgDsLibraryButtonPopover>
-              <SgDsLibraryButton trailingIcon="chevron-right" badgeVariant="danger" variant="ghost" size="sm" shape="default">
+              <SgDsLibraryButton trailingIcon="chevron-right" badgeVariant="danger" variant="ghost" size="sm" shape="default" onClick={() => navigate('/video')}>
                 모든 랭킹 보기
               </SgDsLibraryButton>
             </SgDsLibrarySectionTitleGroup>
           </SgDsLibrarySectionTitle>
 
           <SgDsLibraryCardGrid
-            count="10"
+            count={Math.min(filteredPosts.length, 10)}
             itemSize="custom"
             itemSizeOverride="400px"
             layout="row"
@@ -197,7 +272,7 @@ export default function VideoMainPage() {
             edgeFade="fade"
             scroll="snap"
           >
-            {posts.slice(0, 10).map((p, i) => (
+            {filteredPosts.slice(0, 10).map((p, i) => (
               <SgDsLibraryStack
                 key={p.id}
                 justify="start"
@@ -227,7 +302,7 @@ export default function VideoMainPage() {
                   {i + 1}
                 </SgDsLibraryText>
                 <SgDsLibraryVideoListCard
-                  thumbnailImageUrl={p.thumbnail_url ?? ''}
+                  thumbnailImageUrl={getPostThumbnail(p)}
                   title={p.title ?? ''}
                   creatorName={p.creator_user?.username ?? ''}
                   meta={`${p.views_count ?? 0} 시청 · ${timeAgo(p.created_at)}`}
@@ -252,6 +327,8 @@ export default function VideoMainPage() {
                   thumbnailBackground="linear-gradient(140deg, #0c1429, #4c1d95 50%, #be185d)"
                   actionIcon="ellipsis"
                   showAction={true}
+                  onAvatarClick={() => { if (p.creator_user?.id) navigate(`/creator/${p.creator_user.id}`) }}
+                  onActionClick={() => { navigator.clipboard.writeText(`${window.location.origin}/video/${p.id}`).catch(() => {}) }}
                 />
               </SgDsLibraryStack>
             ))}
@@ -279,14 +356,16 @@ export default function VideoMainPage() {
             <SgDsLibraryStack flex="1 1 auto" minWidth="0">
               <SgDsLibraryTabs ariaLabel="카테고리 필터" size="md" variant="pill">
                 <SgDsLibraryTabsList>
-                  <SgDsLibraryTab selected leadingIcon="layout-grid">전체</SgDsLibraryTab>
-                  <SgDsLibraryTab leadingIcon="headphones">보이스드라마</SgDsLibraryTab>
-                  <SgDsLibraryTab leadingIcon="clapperboard">시네마틱</SgDsLibraryTab>
-                  <SgDsLibraryTab leadingIcon="ear">ASMR</SgDsLibraryTab>
-                  <SgDsLibraryTab leadingIcon="film">단편영상</SgDsLibraryTab>
-                  <SgDsLibraryTab leadingIcon="sparkles">애니메이션</SgDsLibraryTab>
-                  <SgDsLibraryTab leadingIcon="play">MV</SgDsLibraryTab>
-                  <SgDsLibraryTab leadingIcon="video">Vlog</SgDsLibraryTab>
+                  {CATEGORIES.map((cat) => (
+                    <SgDsLibraryTab
+                      key={cat}
+                      selected={activeCategory === cat}
+                      leadingIcon={CATEGORY_ICONS[cat]}
+                      onClick={() => setActiveCategory(cat)}
+                    >
+                      {cat}
+                    </SgDsLibraryTab>
+                  ))}
                 </SgDsLibraryTabsList>
               </SgDsLibraryTabs>
             </SgDsLibraryStack>
@@ -294,16 +373,15 @@ export default function VideoMainPage() {
               <SgDsLibraryButtonPopover
                 trailingIcon="chevron-down"
                 placement="bottom-end"
-                buttonLabel="최신순"
+                buttonLabel={sortLabel}
                 buttonShape="default"
                 buttonSize="sm"
                 buttonVariant="ghost"
                 closeOnItemClick={true}
               >
                 <SgDsLibraryPopoverList>
-                  <SgDsLibraryPopoverItem icon="clock">최신순</SgDsLibraryPopoverItem>
-                  <SgDsLibraryPopoverItem icon="flame">인기순</SgDsLibraryPopoverItem>
-                  <SgDsLibraryPopoverItem icon="sparkles">추천순</SgDsLibraryPopoverItem>
+                  <SgDsLibraryPopoverItem icon="clock" onClick={() => handleSort('latest', '최신순')}>최신순</SgDsLibraryPopoverItem>
+                  <SgDsLibraryPopoverItem icon="flame" onClick={() => handleSort('popular', '인기순')}>인기순</SgDsLibraryPopoverItem>
                 </SgDsLibraryPopoverList>
               </SgDsLibraryButtonPopover>
             </SgDsLibrarySectionTitleGroup>
@@ -311,7 +389,7 @@ export default function VideoMainPage() {
 
           <SgDsLibraryCardGrid
             cols="4"
-            count={posts.length}
+            count={filteredPosts.length}
             itemSize="custom"
             itemSizeOverride="400px"
             layout="grid"
@@ -320,11 +398,11 @@ export default function VideoMainPage() {
             edgeFade="fade"
             scroll="snap"
           >
-            {posts.map((p) => (
+            {filteredPosts.map((p) => (
               <SgDsLibraryVideoListCard
                 key={p.id}
                 mediaSize="sm"
-                thumbnailImageUrl={p.thumbnail_url ?? ''}
+                thumbnailImageUrl={getPostThumbnail(p)}
                 title={p.title ?? ''}
                 creatorName={p.creator_user?.username ?? ''}
                 meta={`${p.views_count ?? 0} 시청 · ${timeAgo(p.created_at)}`}
@@ -350,6 +428,8 @@ export default function VideoMainPage() {
                 showAction={true}
                 style={{ cursor: 'pointer' }}
                 onClick={() => navigate(`/video/${p.id}`)}
+                onAvatarClick={() => { if (p.creator_user?.id) navigate(`/creator/${p.creator_user.id}`) }}
+                onActionClick={() => { navigator.clipboard.writeText(`${window.location.origin}/video/${p.id}`).catch(() => {}) }}
               />
             ))}
           </SgDsLibraryCardGrid>

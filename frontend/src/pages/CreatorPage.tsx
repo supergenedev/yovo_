@@ -133,43 +133,51 @@ export default function CreatorPage() {
               edgeFade="fade"
               scroll="snap"
             >
-              {recommended.map((creator: any) => (
-                <SgDsLibraryCard key={creator.id} variant="outline" padding="lg" style={{ cursor: 'pointer' }}>
-                  <SgDsLibraryStack direction="column" align="center" gap="md">
-                    <SgDsLibraryStack direction="column" align="center" gap="xxs" padding="none">
-                      <SgDsLibraryAvatar
-                        src={creator.profile_image ?? undefined}
-                        initials={getInitials(creator.nickname)}
-                        size="2xl"
-                        shape="circle"
-                        tone="brand"
-                        alt={creator.nickname}
-                        onClick={() => navigate(`/creator/${creator.id}`)}
-                        style={{ cursor: 'pointer' }}
-                      />
-                      <SgDsLibraryStack justify="center" direction="row" align="center" gap="xxs">
-                        <SgDsLibraryText as="p" variant="body" weight="semibold">{creator.nickname}</SgDsLibraryText>
-                        {creator.creator_type === 'official' && (
-                          <SgDsLibraryIcon name="badge-check" size="14px" />
+              {recommended.map((creator: any) => {
+                const isFollowing = creator.interaction_with_me?.is_following
+                return (
+                  <SgDsLibraryCard
+                    key={creator.id}
+                    variant="outline"
+                    padding="lg"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/creator/${creator.id}`)}
+                  >
+                    <SgDsLibraryStack direction="column" align="center" gap="md">
+                      <SgDsLibraryStack direction="column" align="center" gap="xxs" padding="none">
+                        <SgDsLibraryAvatar
+                          src={creator.profile_image ?? undefined}
+                          initials={getInitials(creator.nickname)}
+                          size="2xl"
+                          shape="circle"
+                          tone="brand"
+                          alt={creator.nickname}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <SgDsLibraryStack justify="center" direction="row" align="center" gap="xxs">
+                          <SgDsLibraryText as="p" variant="body" weight="semibold">{creator.nickname}</SgDsLibraryText>
+                          {creator.creator_type === 'official' && (
+                            <SgDsLibraryIcon name="badge-check" size="14px" />
+                          )}
+                        </SgDsLibraryStack>
+                        {creator.username && (
+                          <SgDsLibraryText as="p" variant="caption" tone="tertiary">@{creator.username}</SgDsLibraryText>
                         )}
                       </SgDsLibraryStack>
-                      {creator.username && (
-                        <SgDsLibraryText as="p" variant="caption" tone="tertiary">@{creator.username}</SgDsLibraryText>
-                      )}
+                      <SgDsLibraryButton
+                        style={{ width: '100%' }}
+                        variant={isFollowing ? 'primary' : 'soft'}
+                        size="sm"
+                        shape="pill"
+                        leadingIcon={isFollowing ? 'check' : 'plus'}
+                        onClick={(e: any) => { e.stopPropagation(); handleFollow(creator) }}
+                      >
+                        {isFollowing ? '팔로잉' : '팔로우'}
+                      </SgDsLibraryButton>
                     </SgDsLibraryStack>
-                    <SgDsLibraryButton
-                      style={{ width: '100%' }}
-                      variant="soft"
-                      size="sm"
-                      shape="pill"
-                      leadingIcon="plus"
-                      onClick={(e: any) => { e.stopPropagation(); handleFollow(creator) }}
-                    >
-                      팔로우
-                    </SgDsLibraryButton>
-                  </SgDsLibraryStack>
-                </SgDsLibraryCard>
-              ))}
+                  </SgDsLibraryCard>
+                )
+              })}
             </SgDsLibraryCardGrid>
           </SgDsLibraryStack>
         )}

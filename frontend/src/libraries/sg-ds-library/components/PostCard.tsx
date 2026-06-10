@@ -65,6 +65,14 @@ export type SgDsLibraryPostCardProps = Omit<HTMLAttributes<HTMLElement>, 'childr
   bodySlot?: ReactNode;
   engagementSlot?: ReactNode;
   toolbarSlot?: ReactNode;
+  /* 인터랙션 콜백 — 미전달 시 기존처럼 표시 전용 버튼으로 동작 */
+  liked?: boolean;
+  onLikeClick?: () => void;
+  onCommentClick?: () => void;
+  onShareClick?: () => void;
+  onSupportClick?: () => void;
+  onMoreClick?: () => void;
+  onUserClick?: () => void;
 };
 
 export function SgDsLibraryPostCard(rawProps: SgDsLibraryPostCardProps) {
@@ -99,6 +107,13 @@ export function SgDsLibraryPostCard(rawProps: SgDsLibraryPostCardProps) {
   userMeta,
   userName = 'User',
   verified = false,
+  liked = false,
+  onLikeClick,
+  onCommentClick,
+  onShareClick,
+  onSupportClick,
+  onMoreClick,
+  onUserClick,
   ...props
 } = resolveWorkbenchModeProps(rawProps);
   const hasText = Boolean(title || prose);
@@ -139,7 +154,9 @@ export function SgDsLibraryPostCard(rawProps: SgDsLibraryPostCardProps) {
           meta={userMeta}
           name={userName}
           verified={verified}
-          tailSlot={<SgDsLibraryButton aria-label="More" iconOnly leadingIcon="more-horizontal" size="sm" variant="ghost" />}
+          onClick={onUserClick}
+          style={onUserClick ? { cursor: 'pointer' } : undefined}
+          tailSlot={<SgDsLibraryButton aria-label="More" iconOnly leadingIcon="more-horizontal" size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onMoreClick?.() }} />}
         />
       </header>
 
@@ -187,20 +204,28 @@ export function SgDsLibraryPostCard(rawProps: SgDsLibraryPostCardProps) {
               ) : null}
               <div className="post-card-action-row">
                 <div className="post-card-actions" aria-label="Post actions">
-                  <SgDsLibraryButton className="post-card-action" size="sm" variant="ghost" leadingIcon="heart">
+                  <SgDsLibraryButton
+                    className="post-card-action"
+                    size="sm"
+                    variant={liked ? 'soft' : 'ghost'}
+                    leadingIcon="heart"
+                    style={liked ? { color: 'var(--p-color-brand-500, #ff0055)' } : undefined}
+                    aria-pressed={liked}
+                    onClick={onLikeClick}
+                  >
                     <span>Like</span>
                     {likeStat ? <span className="post-card-action-count">{likeStat.value}</span> : null}
                   </SgDsLibraryButton>
-                  <SgDsLibraryButton className="post-card-action" size="sm" variant="ghost" leadingIcon="message-circle">
+                  <SgDsLibraryButton className="post-card-action" size="sm" variant="ghost" leadingIcon="message-circle" onClick={onCommentClick}>
                     <span>Comment</span>
                     {commentStat ? <span className="post-card-action-count">{commentStat.value}</span> : null}
                   </SgDsLibraryButton>
-                  <SgDsLibraryButton className="post-card-action" size="sm" variant="ghost" leadingIcon="share-2">
+                  <SgDsLibraryButton className="post-card-action" size="sm" variant="ghost" leadingIcon="share-2" onClick={onShareClick}>
                     <span>Share</span>
                     {shareStat ? <span className="post-card-action-count">{shareStat.value}</span> : null}
                   </SgDsLibraryButton>
                 </div>
-                <SgDsLibraryButton className="post-card-support-action" size="sm" leadingIcon="gem">
+                <SgDsLibraryButton className="post-card-support-action" size="sm" leadingIcon="gem" onClick={onSupportClick}>
                   Support
                 </SgDsLibraryButton>
               </div>

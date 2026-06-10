@@ -31,6 +31,7 @@ import {
 } from '@/libraries/sg-ds-library/components'
 import { useVideoStore } from '@/stores/video'
 import { apiFetch } from '@/lib/api'
+import type { SgDsLibraryCommentInputProps } from '@/libraries/sg-ds-library/components/CommentInput'
 
 function timeAgo(ms?: number | string | null): string {
   if (!ms) return ''
@@ -48,6 +49,17 @@ function formatDate(iso?: string | null): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
+// 댓글 객체의 liked 상태 판단 (서버 필드 또는 로컬 오버라이드)
+function isCommentLiked(c: any, localLikes: Record<number, boolean>): boolean {
+  if (c.id in localLikes) return localLikes[c.id]
+  return c.interaction?.liked ?? c.liked ?? false
+}
+
+function getCommentLikeCount(c: any, localLikeDelta: Record<number, number>): number {
+  const base = c.likes_count ?? 0
+  return base + (localLikeDelta[c.id] ?? 0)
+}
+
 export default function VideoPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -55,9 +67,26 @@ export default function VideoPage() {
 
   const [creatorPosts, setCreatorPosts] = useState<any[]>([])
   const [comments, setComments] = useState<any[]>([])
+  const [purchaseError, setPurchaseError] = useState<string | null>(null)
+
+  // comment reply state
+  const [replyTo, setReplyTo] = useState<{ id: number; username: string } | null>(null)
+
+  // comment like local state (optimistic)
+  const [localLikes, setLocalLikes] = useState<Record<number, boolean>>({})
+  const [localLikeDelta, setLocalLikeDelta] = useState<Record<number, number>>({})
 
   const liked = post?.interaction_with_me?.liked ?? false
   const bookmarked = post?.interaction_with_me?.bookmarked ?? false
+
+  // buyer_only and not yet seen/purchased
+  const showPurchaseAlert = post?.view_type === 'buyer_only' && !(post?.interaction_with_me?.seen)
+
+  // find video media
+  const videoMedia = post?.media?.find((m: any) => m.content_type?.startsWith('video/'))
+  const imageMedia = post?.media?.find((m: any) => m.content_type?.startsWith('image/'))
+  const thumbnailSrc = imageMedia?.url ?? post?.thumbnail_url ?? ''
+  const isLocked = post?.view_type === 'buyer_only' && !post?.interaction_with_me?.seen && (!post?.media || post.media.length === 0)
 
   useEffect(() => {
     if (!id) return
@@ -90,6 +119,57 @@ export default function VideoPage() {
     if (bookmarked) unbookmarkPost(id)
     else bookmarkPost(id)
   }
+
+  async function handlePurchase() {
+    if (!id) return
+    setPurchaseError(null)
+    try {
+      const res: any = await apiFetch(`/api/v/posts/${id}/purchase`, { method: 'POST' })
+      // update store with fresh post data that includes unlocked media
+      useVideoStore.setState({ currentPost: res.post })
+    } catch (e: any) {
+      const msg = e?.data?.message ?? e?.message ?? '구매에 실패했습니다'
+      setPurchaseError(msg)
+    }
+  }
+
+  async function handleCommentSubmit(text: string) {
+    if (!id || !text.trim()) return
+    try {
+      const body: any = { text }
+      if (replyTo) body.parent_id = replyTo.id
+      const res: any = await apiFetch(`/api/v/posts/${id}/post_comments`, { method: 'POST', body })
+      const newComment = res.post_comment ?? res
+      setComments((prev) => [...prev, newComment])
+      setReplyTo(null)
+    } catch (e) {
+      console.error('comment submit error:', e)
+    }
+  }
+
+  async function handleCommentLike(c: any) {
+    const currentlyLiked = isCommentLiked(c, localLikes)
+    // optimistic update
+    setLocalLikes((prev) => ({ ...prev, [c.id]: !currentlyLiked }))
+    setLocalLikeDelta((prev) => ({ ...prev, [c.id]: (prev[c.id] ?? 0) + (currentlyLiked ? -1 : 1) }))
+    try {
+      if (currentlyLiked) {
+        await apiFetch(`/api/v/post_comments/${c.id}/post_comment_likes`, { method: 'DELETE' })
+      } else {
+        await apiFetch(`/api/v/post_comments/${c.id}/post_comment_likes`, { method: 'POST' })
+      }
+    } catch (e) {
+      // revert
+      setLocalLikes((prev) => ({ ...prev, [c.id]: currentlyLiked }))
+      setLocalLikeDelta((prev) => ({ ...prev, [c.id]: (prev[c.id] ?? 0) + (currentlyLiked ? 1 : -1) }))
+    }
+  }
+
+  function handleShare() {
+    navigator.clipboard.writeText(window.location.href).catch(() => {})
+  }
+
+  const creatorId = post?.creator_user?.id
 
   return (
     <SgDsLibraryStack
@@ -160,7 +240,7 @@ export default function VideoPage() {
                 </SgDsLibraryBreadcrumbItem>
                 {post?.category && (
                   <SgDsLibraryBreadcrumbItem>
-                    <SgDsLibraryBreadcrumbLink href="#">{post.category}</SgDsLibraryBreadcrumbLink>
+                    <SgDsLibraryBreadcrumbLink href="/video">{post.category}</SgDsLibraryBreadcrumbLink>
                   </SgDsLibraryBreadcrumbItem>
                 )}
                 <SgDsLibraryBreadcrumbItem>
@@ -196,55 +276,103 @@ export default function VideoPage() {
               background="none"
             >
               <SgDsLibraryStack as="div" direction="column" align="stretch" justify="start" gap="xs" padding="none" background="none">
-                {/* Purchase alert - show if post exists and is locked */}
-                {post && (
+                {/* Purchase alert */}
+                {post && showPurchaseAlert && (
                   <SgDsLibraryAlert
                     style={{ width: '100%' }}
-                    action1Variant="primary"
-                    action1Label="구매하기"
                     actionPlacement="end"
                     hideIcon={false}
                     status="info"
                     variant="flat"
                     icon="lock"
                     title="전체 재생은 구매 후 가능해요"
-                    message={`미리듣기 00:30 · 전체 ${post.duration ?? ''}`}
+                    message={purchaseError ?? `미리듣기 00:30 · 전체 ${post.duration ?? ''}`}
+                    actions={
+                      <SgDsLibraryButton variant="primary" size="sm" shape="pill" onClick={handlePurchase}>
+                        구매하기
+                      </SgDsLibraryButton>
+                    }
                   />
                 )}
 
                 {/* Post media */}
                 {post && (
-                  <SgDsLibraryPostListItem
-                    mediaSrc={post.thumbnail_url ?? ''}
-                    avatarSrc={post.creator_user?.avatar_url ?? ''}
-                    style={{ width: '100%' }}
-                    title={post.title ?? ''}
-                    initials={(post.creator_user?.username ?? 'U').slice(0, 2)}
-                    meta={`${post.creator_user?.username ?? ''} · ${timeAgo(post.created_at)}`}
-                    avatarAlt={post.creator_user?.username ?? ''}
-                    showAvatar={true}
-                    variant="vertical"
-                    avatarTone="amber"
-                    size="lg"
-                    avatarSize="sm"
-                    avatarShape="circle"
-                    mediaAspect="16/9"
-                    mediaBackground="linear-gradient(140deg, #0c1429 0%, #4c1d95 50%, #be185d 100%)"
-                    mediaBadgeStatus="info"
-                    mediaBadgeVariant="solid"
-                    mediaDuration={post.duration ?? ''}
-                    mediaLiveLabel="LIVE"
-                    mediaLockActionShape="pill"
-                    mediaLockActionSize="sm"
-                    mediaLockActionVariant="primary"
-                    mediaLockIcon="lock"
-                    mediaPlayLabel="Play"
-                    mediaProgressLabel="Media progress"
-                    mediaShowGrain={true}
-                    mediaShowPlay={true}
-                    mediaSize="sm"
-                    mediaProgress={0}
-                  />
+                  <div style={{ position: 'relative', width: '100%' }}>
+                    {videoMedia ? (
+                      <video
+                        controls
+                        src={videoMedia.url}
+                        poster={thumbnailSrc}
+                        style={{
+                          width: '100%',
+                          aspectRatio: '16/9',
+                          borderRadius: 'var(--ds-radius-md)',
+                          background: '#000',
+                          display: 'block',
+                        }}
+                      />
+                    ) : (
+                      <SgDsLibraryPostListItem
+                        mediaSrc={thumbnailSrc}
+                        avatarSrc={post.creator_user?.avatar_url ?? ''}
+                        style={{ width: '100%', cursor: creatorId ? 'pointer' : undefined }}
+                        title={post.title ?? ''}
+                        initials={(post.creator_user?.username ?? 'U').slice(0, 2)}
+                        meta={`${post.creator_user?.username ?? ''} · ${timeAgo(post.created_at)}`}
+                        avatarAlt={post.creator_user?.username ?? ''}
+                        showAvatar={true}
+                        variant="vertical"
+                        avatarTone="amber"
+                        size="lg"
+                        avatarSize="sm"
+                        avatarShape="circle"
+                        mediaAspect="16/9"
+                        mediaBackground="linear-gradient(140deg, #0c1429 0%, #4c1d95 50%, #be185d 100%)"
+                        mediaBadgeStatus="info"
+                        mediaBadgeVariant="solid"
+                        mediaDuration={post.duration ?? ''}
+                        mediaLiveLabel="LIVE"
+                        mediaLockActionShape="pill"
+                        mediaLockActionSize="sm"
+                        mediaLockActionVariant="primary"
+                        mediaLockIcon="lock"
+                        mediaPlayLabel="Play"
+                        mediaProgressLabel="Media progress"
+                        mediaShowGrain={true}
+                        mediaShowPlay={true}
+                        mediaSize="sm"
+                        mediaProgress={0}
+                      />
+                    )}
+                    {/* Locked overlay for buyer_only with no media */}
+                    {isLocked && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          borderRadius: 'var(--ds-radius-md)',
+                          background: 'rgba(0,0,0,0.6)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.75rem',
+                        }}
+                      >
+                        <SgDsLibraryText as="p" variant="heading-3" weight="bold" style={{ color: '#fff' }}>
+                          구매 후 시청 가능한 콘텐츠입니다
+                        </SgDsLibraryText>
+                        <SgDsLibraryButton variant="primary" size="md" shape="pill" onClick={handlePurchase}>
+                          구매하기
+                        </SgDsLibraryButton>
+                        {purchaseError && (
+                          <SgDsLibraryText as="p" variant="body-sm" style={{ color: '#fca5a5' }}>
+                            {purchaseError}
+                          </SgDsLibraryText>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* Stats row */}
@@ -287,8 +415,8 @@ export default function VideoPage() {
                           closeOnItemClick={true}
                         >
                           <SgDsLibraryPopoverList>
-                            <SgDsLibraryPopoverItem icon="share-2">공유</SgDsLibraryPopoverItem>
-                            <SgDsLibraryPopoverItem icon="triangle-alert">신고</SgDsLibraryPopoverItem>
+                            <SgDsLibraryPopoverItem icon="share-2" onClick={handleShare}>공유</SgDsLibraryPopoverItem>
+                            <SgDsLibraryPopoverItem icon="triangle-alert" onClick={() => alert('접수되었습니다')}>신고</SgDsLibraryPopoverItem>
                           </SgDsLibraryPopoverList>
                         </SgDsLibraryButtonPopover>
                       </SgDsLibraryToolbarGroup>
@@ -379,8 +507,8 @@ export default function VideoPage() {
                   </SgDsLibraryCard>
 
                   <SgDsLibraryStack direction="row" justify="center" align="center" gap="sm" paddingTop="md">
-                    <SgDsLibraryButton variant="ghost" size="sm" leadingIcon="triangle-alert">신고하기</SgDsLibraryButton>
-                    <SgDsLibraryButton variant="ghost" size="sm" leadingIcon="ban">사용자 차단</SgDsLibraryButton>
+                    <SgDsLibraryButton variant="ghost" size="sm" leadingIcon="triangle-alert" onClick={() => alert('접수되었습니다')}>신고하기</SgDsLibraryButton>
+                    <SgDsLibraryButton variant="ghost" size="sm" leadingIcon="ban" onClick={() => alert('접수되었습니다')}>사용자 차단</SgDsLibraryButton>
                   </SgDsLibraryStack>
                 </SgDsLibraryStack>
 
@@ -396,21 +524,26 @@ export default function VideoPage() {
                   </SgDsLibraryStack>
 
                   <SgDsLibraryStack as="div" direction="column" align="stretch" justify="start" gap="xxs" padding="none" background="none">
-                    <SgDsLibraryCommentInput
-                      showCancel={false}
-                      readOnly={false}
-                      disabled={false}
-                      initials="ME"
-                      placeholder="댓글을 입력하세요"
-                      showAvatar={true}
-                      avatarTone="brand"
-                      rows="3"
-                      maxLength="300"
-                      showAttachment={true}
-                      showCounter={true}
-                      showEmoji={true}
-                      submitLabel="등록"
-                    />
+                    {(() => {
+                      const commentInputProps: SgDsLibraryCommentInputProps = {
+                        showCancel: replyTo != null,
+                        readOnly: false,
+                        disabled: false,
+                        initials: 'ME',
+                        placeholder: replyTo ? `@${replyTo.username}에게 답글` : '댓글을 입력하세요',
+                        showAvatar: true,
+                        avatarTone: 'brand',
+                        rows: '3',
+                        maxLength: '300',
+                        showAttachment: true,
+                        showCounter: true,
+                        showEmoji: true,
+                        submitLabel: '등록',
+                        onSubmit: ((text: string) => { handleCommentSubmit(text) }) as SgDsLibraryCommentInputProps['onSubmit'],
+                        onCancel: () => setReplyTo(null),
+                      }
+                      return <SgDsLibraryCommentInput {...commentInputProps} />
+                    })()}
                     <SgDsLibraryDivider />
                     {comments.map((c: any) => (
                       <div key={c.id}>
@@ -420,9 +553,14 @@ export default function VideoPage() {
                           avatarTone="neutral"
                           initials={(c.user?.username ?? 'U').slice(0, 2)}
                           time={timeAgo(c.created_at)}
-                          body={c.body ?? c.content ?? ''}
-                          likeCount={c.likes_count ?? 0}
+                          body={c.body ?? c.content ?? c.text ?? ''}
+                          likeCount={getCommentLikeCount(c, localLikeDelta)}
                           replyCount={c.replies_count ?? 0}
+                          liked={isCommentLiked(c, localLikes)}
+                          onLikeClick={() => handleCommentLike(c)}
+                          onReplyClick={() => setReplyTo({ id: c.id, username: c.user?.username ?? c.username ?? 'user' })}
+                          onFlagClick={() => alert('접수되었습니다')}
+                          onMoreClick={() => {}}
                         />
                         <SgDsLibraryDivider />
                       </div>
@@ -453,7 +591,14 @@ export default function VideoPage() {
                       wrapActions={true}
                     >
                       <SgDsLibrarySectionTitleGroup align="end">
-                        <SgDsLibraryButton trailingIcon="chevron-right" badgeVariant="danger" variant="soft" size="sm" shape="default">
+                        <SgDsLibraryButton
+                          trailingIcon="chevron-right"
+                          badgeVariant="danger"
+                          variant="soft"
+                          size="sm"
+                          shape="default"
+                          onClick={() => creatorId && navigate(`/creator/${creatorId}`)}
+                        >
                           모두보기
                         </SgDsLibraryButton>
                       </SgDsLibrarySectionTitleGroup>
@@ -498,13 +643,15 @@ export default function VideoPage() {
                           showAction={true}
                           style={{ cursor: 'pointer' }}
                           onClick={() => navigate(`/video/${p.id}`)}
+                          onAvatarClick={() => p.creator_user?.id && navigate(`/creator/${p.creator_user.id}`)}
+                          onActionClick={() => navigator.clipboard.writeText(`${window.location.origin}/video/${p.id}`).catch(() => {})}
                         />
                       ))}
                     </SgDsLibraryCardGrid>
                   </SgDsLibraryStack>
                 )}
 
-                {/* Related posts (dummy — no similarity endpoint) */}
+                {/* Related posts (dummy) */}
                 <SgDsLibraryStack style={{ maxWidth: '1400px' }} as="section" direction="column" gap="xs">
                   <SgDsLibrarySectionTitle
                     style={{ width: '100%' }}
@@ -521,12 +668,18 @@ export default function VideoPage() {
                     wrapActions={true}
                   >
                     <SgDsLibrarySectionTitleGroup align="end">
-                      <SgDsLibraryButton trailingIcon="chevron-right" badgeVariant="danger" variant="soft" size="sm" shape="default">
+                      <SgDsLibraryButton
+                        trailingIcon="chevron-right"
+                        badgeVariant="danger"
+                        variant="soft"
+                        size="sm"
+                        shape="default"
+                        onClick={() => navigate('/video')}
+                      >
                         모두보기
                       </SgDsLibraryButton>
                     </SgDsLibrarySectionTitleGroup>
                   </SgDsLibrarySectionTitle>
-                  {/* dummy: no similarity endpoint available */}
                   <SgDsLibraryText as="p" variant="body-sm" tone="tertiary" style={{ padding: '0.5rem 0' }}>
                     추천 작품을 불러오는 중...
                   </SgDsLibraryText>
@@ -568,9 +721,8 @@ export default function VideoPage() {
                 <SgDsLibraryStack style={{ height: 'fit-content' }} direction="column" gap="none">
                   <SgDsLibraryStack style={{ padding: '0px', margin: '0px' }} direction="row" align="center" justify="between" height="21px">
                     <SgDsLibraryText as="h3" variant="ui" weight="semibold">YOVO 트랜딩</SgDsLibraryText>
-                    <SgDsLibraryLink tailIcon="chevron-right" external={false} variant="subtle" size="sm" href="#">모두보기</SgDsLibraryLink>
+                    <SgDsLibraryLink tailIcon="chevron-right" external={false} variant="subtle" size="sm" href="/video">모두보기</SgDsLibraryLink>
                   </SgDsLibraryStack>
-                  {/* dummy — no trending endpoint */}
                   <SgDsLibraryTopicRow rank={1} title="달이 지는 도시" sub="317K 시청 · 1,840 후원자" delta="+218%" deltaTone="brand" divider={true} />
                   <SgDsLibraryTopicRow rank={2} title="#synthwave" sub="이번 주 새 트랙 218개" delta="+94%" deltaTone="neutral" divider={true} />
                   <SgDsLibraryTopicRow rank={3} title="한국어 내레이션" sub="12개 모집 진행 중" delta="+61%" deltaTone="neutral" divider={true} />
@@ -585,7 +737,6 @@ export default function VideoPage() {
                   <SgDsLibraryText as="h3" variant="ui" weight="semibold">팔로우 추천</SgDsLibraryText>
                   <SgDsLibraryLink variant="subtle" size="sm" href="#">새로고침</SgDsLibraryLink>
                 </SgDsLibraryStack>
-                {/* dummy — no recommendation endpoint */}
                 <SgDsLibraryStack direction="column" gap="md">
                   <SgDsLibraryUserBlock avatarSize="sm" avatarSrc="https://i.pinimg.com/1200x/b9/45/02/b94502342dfd29c213a99bb1d93c151d.jpg" name="SOYU" meta="보컬 · 24.1K" initials="SY" avatarTone="pink" verified={true} size="sm" />
                   <SgDsLibraryUserBlock avatarSize="sm" avatarSrc="https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg" name="Mika 三輪" meta="첼리스트 · 8.6K" initials="MK" avatarTone="green" size="sm" />

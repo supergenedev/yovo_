@@ -26,11 +26,16 @@ import {
   SgDsLibraryInput,
   SgDsLibraryStory,
   SgDsLibraryStoryStrip,
+  SgDsLibraryDialog,
+  SgDsLibraryToast,
+  SgDsLibraryToastRegion,
 } from '@/libraries/sg-ds-library/components'
 import { useFeedStore } from '@/stores/feed'
 import { useInteractionsStore } from '@/stores/interactions'
 import { useMeStore } from '@/stores/me'
 import { useCreatorStore } from '@/stores/creator'
+import { apiFetch } from '@/lib/api'
+import { useNavigate } from 'react-router-dom'
 
 // ---- helpers ----------------------------------------------------------------
 
@@ -59,15 +64,24 @@ function timeAgo(ms?: number | null): string {
   return `${Math.floor(hours / 24)}일 전`
 }
 
+type SortMode = 'recommend' | 'latest' | 'popular'
+
 // ---- component --------------------------------------------------------------
 
 export default function MainPage() {
   const [activeTab, setActiveTab] = useState(0)
+  const [sortMode, setSortMode] = useState<SortMode>('recommend')
+  const [shareToastPostId, setShareToastPostId] = useState<string | null>(null)
+  const [tipDialogPostId, setTipDialogPostId] = useState<string | null>(null)
+  const [tipAmount, setTipAmount] = useState('100')
+  const [tipLoading, setTipLoading] = useState(false)
+  const [tipSuccess, setTipSuccess] = useState(false)
 
   const feedStore = useFeedStore()
   const interactionsStore = useInteractionsStore()
   const meStore = useMeStore()
   const creatorStore = useCreatorStore()
+  const navigate = useNavigate()
 
   useEffect(() => {
     feedStore.fetchDiscover()
@@ -82,11 +96,73 @@ export default function MainPage() {
   function handleTabChange(idx: number) {
     setActiveTab(idx)
     if (idx === 0) feedStore.fetchDiscover()
+    else if (idx === 1) feedStore.fetchFeed()
     else if (idx === 2) feedStore.fetchFeed()
+  }
+
+  function sortLabel(): string {
+    if (sortMode === 'latest') return '최신순'
+    if (sortMode === 'popular') return '인기순'
+    return '추천순'
+  }
+
+  function sortedPosts(posts: any[]) {
+    if (sortMode === 'latest') return [...posts].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))
+    if (sortMode === 'popular') return [...posts].sort((a, b) => (b.likes_count ?? 0) - (a.likes_count ?? 0))
+    return posts
+  }
+
+  function handleShare(post: any) {
+    const url = location.origin + '/video/' + post.id
+    navigator.clipboard.writeText(url).catch(() => {})
+    setShareToastPostId(String(post.id))
+    setTimeout(() => setShareToastPostId(null), 2000)
+  }
+
+  async function handleTipSubmit() {
+    if (!tipDialogPostId) return
+    const amount = parseInt(tipAmount, 10)
+    if (!amount || amount <= 0) return
+    setTipLoading(true)
+    try {
+      await apiFetch(`/api/v/posts/${tipDialogPostId}/post_tips`, {
+        method: 'POST',
+        body: { amount },
+      })
+      setTipSuccess(true)
+      setTimeout(() => {
+        setTipDialogPostId(null)
+        setTipSuccess(false)
+        setTipAmount('100')
+      }, 1500)
+    } catch {
+      // silently fail
+    } finally {
+      setTipLoading(false)
+    }
+  }
+
+  function likedCountAdjustment(post: any): number {
+    const optimistic = interactionsStore.isLiked(post.id)
+    const serverLiked = post.interaction_with_me?.liked ?? false
+    if (optimistic && !serverLiked) return 1
+    if (!optimistic && serverLiked) return -1
+    return 0
   }
 
   function mapPostToCard(post: any) {
     const creator = post.creator_user
+    // media: use first image url if available
+    let imageUrl = post.locked_thumbnail_url ?? undefined
+    if (post.media && Array.isArray(post.media) && post.media.length > 0) {
+      const imgMedia = post.media.find((m: any) => m.content_type?.startsWith('image/'))
+      if (imgMedia) imageUrl = imgMedia.url
+    }
+    const kind = contentKind(post.content_type)
+    // video kind doesn't pass imageUrl per spec
+    const imageUrlProp = kind === 'video' ? undefined : imageUrl
+
+    const adj = likedCountAdjustment(post)
     return {
       userName: creator?.nickname ?? '알 수 없음',
       userInitials: getInitials(creator?.nickname),
@@ -95,13 +171,13 @@ export default function MainPage() {
       verified: creator?.creator_type === 'official',
       title: post.title_ko ?? post.title_ja,
       prose: post.body_ko ?? post.body_ja,
-      imageUrl: post.locked_thumbnail_url ?? undefined,
-      kind: contentKind(post.content_type),
+      imageUrl: imageUrlProp,
+      kind,
       cardVariant: 'outline' as const,
       cardPadding: 'md' as const,
       userMeta: timeAgo(post.created_at),
       stats: [
-        { label: 'Likes', value: post.likes_count },
+        { label: 'Likes', value: (post.likes_count ?? 0) + adj },
         { label: 'Comments', value: post.comments_count },
       ],
     }
@@ -109,7 +185,7 @@ export default function MainPage() {
 
   const me = meStore.user
   const recommended = creatorStore.recommended
-  const posts = feedStore.posts
+  const posts = sortedPosts(feedStore.posts)
 
   return (
     <SgDsLibraryStack
@@ -120,6 +196,48 @@ export default function MainPage() {
       align="stretch"
       gap="lg"
     >
+      {/* ── Tip Dialog ── */}
+      {tipDialogPostId && (
+        <SgDsLibraryDialog
+          open={true}
+          title="후원하기"
+          description="크리에이터에게 크레딧을 후원합니다."
+          action1Label="취소"
+          action1Variant="ghost"
+          action2Label={tipSuccess ? '완료!' : tipLoading ? '처리 중...' : '후원'}
+          action2Variant="primary"
+          onAction1={() => { setTipDialogPostId(null); setTipAmount('100'); setTipSuccess(false) }}
+          onAction2={handleTipSubmit}
+          onDismiss={() => { setTipDialogPostId(null); setTipAmount('100'); setTipSuccess(false) }}
+          size="sm"
+        >
+          <SgDsLibraryStack direction="column" gap="md" padding="sm">
+            <SgDsLibraryText tone="secondary" variant="body-sm">후원 금액 (크레딧)</SgDsLibraryText>
+            <SgDsLibraryInput
+              type="number"
+              value={tipAmount}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTipAmount(e.target.value)}
+              labelPosition="outside"
+              size="md"
+              shape="default"
+              placeholder="100"
+            />
+          </SgDsLibraryStack>
+        </SgDsLibraryDialog>
+      )}
+
+      {/* ── Share Toast ── */}
+      {shareToastPostId && (
+        <SgDsLibraryToastRegion position="bottom-center">
+          <SgDsLibraryToast
+            status="success"
+            variant="solid"
+            message="링크가 클립보드에 복사되었습니다."
+            showDismiss={false}
+          />
+        </SgDsLibraryToastRegion>
+      )}
+
       {/* ── CENTER COLUMN ── */}
       <SgDsLibraryStack
         align="center"
@@ -233,10 +351,10 @@ export default function MainPage() {
                             state="unseen"
                             avatarTone="brand"
                             size="lg"
+                            onClick={() => navigate('/creator/' + creator.id)}
                           />
                         ))
                         : (
-                          // Fallback dummy stories when no data
                           <>
                             <SgDsLibraryStory avatarSrc="https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg" label="Hailey" initials="HL" badge="LIVE" state="unseen" avatarTone="brand" size="lg" />
                             <SgDsLibraryStory avatarSrc="https://i.pinimg.com/736x/a8/37/8c/a8378cc951d79b9130952b0914f92ee6.jpg" label="NeoVoice" initials="NV" badge="LIVE" state="unseen" avatarTone="teal" size="lg" />
@@ -269,16 +387,16 @@ export default function MainPage() {
                           leadingIcon="sliders-horizontal"
                           trailingIcon="chevron-down"
                           placement="bottom-end"
-                          buttonLabel="최신순"
+                          buttonLabel={sortLabel()}
                           buttonShape="default"
                           buttonSize="sm"
                           buttonVariant="soft"
                           closeOnItemClick={true}
                         >
                           <SgDsLibraryPopoverList>
-                            <SgDsLibraryPopoverItem icon="clock">최신순</SgDsLibraryPopoverItem>
-                            <SgDsLibraryPopoverItem icon="flame">인기순</SgDsLibraryPopoverItem>
-                            <SgDsLibraryPopoverItem icon="sparkles">추천순</SgDsLibraryPopoverItem>
+                            <SgDsLibraryPopoverItem icon="clock" onClick={() => setSortMode('latest')}>최신순</SgDsLibraryPopoverItem>
+                            <SgDsLibraryPopoverItem icon="flame" onClick={() => setSortMode('popular')}>인기순</SgDsLibraryPopoverItem>
+                            <SgDsLibraryPopoverItem icon="sparkles" onClick={() => setSortMode('recommend')}>추천순</SgDsLibraryPopoverItem>
                           </SgDsLibraryPopoverList>
                         </SgDsLibraryButtonPopover>
                       </SgDsLibrarySectionTitleGroup>
@@ -300,6 +418,13 @@ export default function MainPage() {
                         <SgDsLibraryPostCard
                           key={post.id}
                           {...card}
+                          liked={interactionsStore.isLiked(post.id)}
+                          onLikeClick={() => interactionsStore.toggleLike(post.id)}
+                          onCommentClick={() => navigate('/video/' + post.id)}
+                          onShareClick={() => handleShare(post)}
+                          onSupportClick={() => { setTipDialogPostId(String(post.id)); setTipAmount('100') }}
+                          onUserClick={() => navigate('/creator/' + post.creator_user?.id)}
+                          onMoreClick={() => {}}
                         />
                       )
                     })}
@@ -344,9 +469,45 @@ export default function MainPage() {
 
             {/* Tab 1: 서포터 전용 */}
             <SgDsLibraryTabsPanel selected={activeTab === 1}>
-              <SgDsLibraryStack align="center" justify="center" padding="2xl">
-                <SgDsLibraryText tone="tertiary">서포터 전용 콘텐츠입니다.</SgDsLibraryText>
-              </SgDsLibraryStack>
+              <SgDsLibraryPostStack style={{ height: '100%' }} newCount="0" showNewPill={false}>
+                {feedStore.loading && posts.length === 0 && (
+                  <SgDsLibraryStack align="center" justify="center" padding="2xl">
+                    <SgDsLibraryText tone="tertiary">피드를 불러오는 중...</SgDsLibraryText>
+                  </SgDsLibraryStack>
+                )}
+                {!feedStore.loading && posts.length === 0 && (
+                  <SgDsLibraryStack align="center" justify="center" padding="2xl">
+                    <SgDsLibraryText tone="tertiary">서포터 전용 콘텐츠입니다.</SgDsLibraryText>
+                  </SgDsLibraryStack>
+                )}
+                {posts.map((post: any) => {
+                  const card = mapPostToCard(post)
+                  return (
+                    <SgDsLibraryPostCard
+                      key={post.id}
+                      {...card}
+                      liked={interactionsStore.isLiked(post.id)}
+                      onLikeClick={() => interactionsStore.toggleLike(post.id)}
+                      onCommentClick={() => navigate('/video/' + post.id)}
+                      onShareClick={() => handleShare(post)}
+                      onSupportClick={() => { setTipDialogPostId(String(post.id)); setTipAmount('100') }}
+                      onUserClick={() => navigate('/creator/' + post.creator_user?.id)}
+                      onMoreClick={() => {}}
+                    />
+                  )
+                })}
+              </SgDsLibraryPostStack>
+              {feedStore.hasMore() && (
+                <SgDsLibraryStack direction="row" justify="center" padding="var(--ds-spacing-space-4)">
+                  <SgDsLibraryButton
+                    variant="ghost"
+                    size="sm"
+                    label="더 불러오기"
+                    trailingIcon="chevron-down"
+                    onClick={() => feedStore.loadMore()}
+                  />
+                </SgDsLibraryStack>
+              )}
             </SgDsLibraryTabsPanel>
 
             {/* Tab 2: 구독중 */}
@@ -365,7 +526,17 @@ export default function MainPage() {
                 {posts.map((post: any) => {
                   const card = mapPostToCard(post)
                   return (
-                    <SgDsLibraryPostCard key={post.id} {...card} />
+                    <SgDsLibraryPostCard
+                      key={post.id}
+                      {...card}
+                      liked={interactionsStore.isLiked(post.id)}
+                      onLikeClick={() => interactionsStore.toggleLike(post.id)}
+                      onCommentClick={() => navigate('/video/' + post.id)}
+                      onShareClick={() => handleShare(post)}
+                      onSupportClick={() => { setTipDialogPostId(String(post.id)); setTipAmount('100') }}
+                      onUserClick={() => navigate('/creator/' + post.creator_user?.id)}
+                      onMoreClick={() => {}}
+                    />
                   )
                 })}
               </SgDsLibraryPostStack>
@@ -490,6 +661,8 @@ export default function MainPage() {
                   initials={getInitials(creator.nickname)}
                   avatarTone="brand"
                   size="sm"
+                  onClick={() => navigate('/creator/' + creator.id)}
+                  style={{ cursor: 'pointer' }}
                 />
               ))
               : (

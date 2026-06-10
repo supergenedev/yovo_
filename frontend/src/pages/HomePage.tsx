@@ -23,10 +23,13 @@ import {
   SgDsLibraryBadge,
   SgDsLibraryAvatar,
   SgDsLibraryCard,
+  SgDsLibraryToast,
+  SgDsLibraryToastRegion,
 } from '@/libraries/sg-ds-library/components'
 import { useFeedStore } from '@/stores/feed'
 import { useCreatorStore } from '@/stores/creator'
 import { useMeStore } from '@/stores/me'
+import { useNavigate } from 'react-router-dom'
 
 // ---- helpers ----------------------------------------------------------------
 
@@ -63,14 +66,28 @@ const TOP10_THUMBNAILS = [
 
 const AVATAR_SRC = 'https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg'
 
+// Category → content_type filter mapping. null means "no filter" (show all).
+const CATEGORY_FILTERS: Array<string[] | null> = [
+  null,                       // 0: 전체
+  ['episode'],                // 1: 보이스드라마
+  ['video'],                  // 2: 시네마틱
+  ['episode'],                // 3: ASMR (episode가 가장 근접)
+  ['video'],                  // 4: 단편영상
+  ['video'],                  // 5: 애니메이션
+  ['video'],                  // 6: MV
+  ['video'],                  // 7: Vlog
+]
+
 // ── component ─────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const [_activeCategory, setActiveCategory] = useState(0)
+  const [activeCategory, setActiveCategory] = useState(0)
+  const [shareToast, setShareToast] = useState(false)
 
   const feedStore = useFeedStore()
   const creatorStore = useCreatorStore()
   const meStore = useMeStore()
+  const navigate = useNavigate()
 
   useEffect(() => {
     feedStore.fetchDiscover()
@@ -81,6 +98,19 @@ export default function HomePage() {
   const discover = creatorStore.discover
   const me = meStore.user
 
+  // Apply category filter client-side
+  const categoryFilter = CATEGORY_FILTERS[activeCategory] ?? null
+  const filteredPosts = categoryFilter
+    ? feedStore.posts.filter((p: any) => categoryFilter.includes(p.content_type))
+    : feedStore.posts
+
+  function handleShare(postId: string | number) {
+    const url = location.origin + '/video/' + postId
+    navigator.clipboard.writeText(url).catch(() => {})
+    setShareToast(true)
+    setTimeout(() => setShareToast(false), 2000)
+  }
+
   return (
     <SgDsLibraryStack
       style={{ width: '100%', height: '100%', overflow: 'hidden' }}
@@ -90,6 +120,18 @@ export default function HomePage() {
       align="stretch"
       gap="lg"
     >
+      {/* Share toast */}
+      {shareToast && (
+        <SgDsLibraryToastRegion position="bottom-center">
+          <SgDsLibraryToast
+            status="success"
+            variant="solid"
+            message="링크가 클립보드에 복사되었습니다."
+            showDismiss={false}
+          />
+        </SgDsLibraryToastRegion>
+      )}
+
       {/* ── CONTENT AREA ── */}
       <SgDsLibraryStack
         style={{
@@ -318,6 +360,7 @@ export default function HomePage() {
                       thumbnailBackground="linear-gradient(140deg, #0c1429, #4c1d95 50%, #be185d)"
                       actionIcon="ellipsis"
                       showAction={true}
+                      onActionClick={() => handleShare(idx)}
                     />
                   </SgDsLibraryStack>
                 ))}
@@ -410,6 +453,7 @@ export default function HomePage() {
                     thumbnailBackground="linear-gradient(140deg, #0c1429, #4c1d95 50%, #be185d)"
                     actionIcon="ellipsis"
                     showAction={true}
+                    onActionClick={() => handleShare('editor-pick')}
                   />
                   <SgDsLibraryStack
                     style={{ height: 'fit-content', paddingRight: 'var(--ds-spacing-space-2)' }}
@@ -513,7 +557,18 @@ export default function HomePage() {
                       padding="lg"
                     >
                       <SgDsLibraryStack direction="column" align="center" gap="md">
-                        <SgDsLibraryStack as="div" radius="none" direction="column" align="center" justify="start" gap="xxs" padding="none" background="none">
+                        <SgDsLibraryStack
+                          as="div"
+                          radius="none"
+                          direction="column"
+                          align="center"
+                          justify="start"
+                          gap="xxs"
+                          padding="none"
+                          background="none"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => navigate('/creator/' + creator.id)}
+                        >
                           <SgDsLibraryAvatar
                             src={creator.profile_image ?? undefined}
                             initials={getInitials(creator.nickname)}
@@ -533,7 +588,6 @@ export default function HomePage() {
                     </SgDsLibraryCard>
                   ))
                   : (
-                    // Dummy fallback
                     <SgDsLibraryCard
                       style={{ backgroundImage: 'linear-gradient(var(--ds-color-surface-card), var(--ds-color-surface-card))', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundBlendMode: 'normal' }}
                       variant="bare"
@@ -578,14 +632,14 @@ export default function HomePage() {
                 <SgDsLibraryStack flex="1 1 auto" minWidth="0">
                   <SgDsLibraryTabs ariaLabel="카테고리 필터" size="md" variant="pill">
                     <SgDsLibraryTabsList>
-                      <SgDsLibraryTab selected={_activeCategory === 0} onClick={() => setActiveCategory(0)} leadingIcon="layout-grid">전체</SgDsLibraryTab>
-                      <SgDsLibraryTab selected={_activeCategory === 1} onClick={() => setActiveCategory(1)} leadingIcon="headphones">보이스드라마</SgDsLibraryTab>
-                      <SgDsLibraryTab selected={_activeCategory === 2} onClick={() => setActiveCategory(2)} leadingIcon="clapperboard">시네마틱</SgDsLibraryTab>
-                      <SgDsLibraryTab selected={_activeCategory === 3} onClick={() => setActiveCategory(3)} leadingIcon="ear">ASMR</SgDsLibraryTab>
-                      <SgDsLibraryTab selected={_activeCategory === 4} onClick={() => setActiveCategory(4)} leadingIcon="film">단편영상</SgDsLibraryTab>
-                      <SgDsLibraryTab selected={_activeCategory === 5} onClick={() => setActiveCategory(5)} leadingIcon="sparkles">애니메이션</SgDsLibraryTab>
-                      <SgDsLibraryTab selected={_activeCategory === 6} onClick={() => setActiveCategory(6)} leadingIcon="play">MV</SgDsLibraryTab>
-                      <SgDsLibraryTab selected={_activeCategory === 7} onClick={() => setActiveCategory(7)} leadingIcon="video">Vlog</SgDsLibraryTab>
+                      <SgDsLibraryTab selected={activeCategory === 0} onClick={() => setActiveCategory(0)} leadingIcon="layout-grid">전체</SgDsLibraryTab>
+                      <SgDsLibraryTab selected={activeCategory === 1} onClick={() => setActiveCategory(1)} leadingIcon="headphones">보이스드라마</SgDsLibraryTab>
+                      <SgDsLibraryTab selected={activeCategory === 2} onClick={() => setActiveCategory(2)} leadingIcon="clapperboard">시네마틱</SgDsLibraryTab>
+                      <SgDsLibraryTab selected={activeCategory === 3} onClick={() => setActiveCategory(3)} leadingIcon="ear">ASMR</SgDsLibraryTab>
+                      <SgDsLibraryTab selected={activeCategory === 4} onClick={() => setActiveCategory(4)} leadingIcon="film">단편영상</SgDsLibraryTab>
+                      <SgDsLibraryTab selected={activeCategory === 5} onClick={() => setActiveCategory(5)} leadingIcon="sparkles">애니메이션</SgDsLibraryTab>
+                      <SgDsLibraryTab selected={activeCategory === 6} onClick={() => setActiveCategory(6)} leadingIcon="play">MV</SgDsLibraryTab>
+                      <SgDsLibraryTab selected={activeCategory === 7} onClick={() => setActiveCategory(7)} leadingIcon="video">Vlog</SgDsLibraryTab>
                     </SgDsLibraryTabsList>
                   </SgDsLibraryTabs>
                 </SgDsLibraryStack>
@@ -611,7 +665,7 @@ export default function HomePage() {
 
               <SgDsLibraryCardGrid
                 cols="4"
-                count={Math.max(feedStore.posts.length, 1)}
+                count={Math.max(filteredPosts.length, 1)}
                 itemSize="custom"
                 itemSizeOverride="400px"
                 layout="grid"
@@ -620,8 +674,8 @@ export default function HomePage() {
                 edgeFade="fade"
                 scroll="snap"
               >
-                {feedStore.posts.length > 0
-                  ? feedStore.posts.map((post: any) => (
+                {filteredPosts.length > 0
+                  ? filteredPosts.map((post: any) => (
                     <SgDsLibraryVideoListCard
                       key={post.id}
                       mediaSize="sm"
@@ -652,6 +706,9 @@ export default function HomePage() {
                       thumbnailBackground="linear-gradient(140deg, #0c1429, #4c1d95 50%, #be185d)"
                       actionIcon="ellipsis"
                       showAction={true}
+                      onClick={() => navigate('/video/' + post.id)}
+                      onAvatarClick={() => navigate('/creator/' + post.creator_user?.id)}
+                      onActionClick={() => handleShare(post.id)}
                     />
                   ))
                   : (

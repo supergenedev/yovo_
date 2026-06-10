@@ -47,6 +47,11 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
+      // ActiveStorage 블롭 URL (포스트 미디어)
+      '/rails': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
     },
   },
 })

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   SgDsLibraryStack,
   SgDsLibraryText,
@@ -43,9 +44,33 @@ function getTypeConfig(type: string) {
   return TYPE_CONFIG[type] ?? { badgeLabel: type, badgeStatus: 'neutral' as const }
 }
 
+const SETTING_KEYS = ['notif_new_post', 'notif_subscription', 'notif_comments', 'notif_yovo'] as const
+type SettingKey = typeof SETTING_KEYS[number]
+const SETTING_DEFAULTS: Record<SettingKey, boolean> = {
+  notif_new_post: true,
+  notif_subscription: true,
+  notif_comments: true,
+  notif_yovo: false,
+}
+
+function loadSettings(): Record<SettingKey, boolean> {
+  const result = { ...SETTING_DEFAULTS }
+  for (const key of SETTING_KEYS) {
+    const val = localStorage.getItem(key)
+    if (val !== null) result[key] = val === 'true'
+  }
+  return result
+}
+
+type SortOrder = 'latest' | 'unread_first'
+
 export default function NotificationPage() {
+  const navigate = useNavigate()
   const notifStore = useNotificationStore()
   const [selectedTab, setSelectedTab] = useState(0)
+  const [sortOrder, setSortOrder] = useState<SortOrder>('latest')
+  const [sortLabel, setSortLabel] = useState('최신순')
+  const [settings, setSettings] = useState<Record<SettingKey, boolean>>(loadSettings)
 
   useEffect(() => {
     notifStore.fetchNotifications()
@@ -63,9 +88,36 @@ export default function NotificationPage() {
   ]
 
   const currentFilter = tabDefs[selectedTab]?.filter
-  const filtered = currentFilter
+  let filtered = currentFilter
     ? notifications.filter((n: any) => n.notification_type === currentFilter)
     : notifications
+
+  if (sortOrder === 'unread_first') {
+    filtered = [...filtered].sort((a: any, b: any) => {
+      if (a.read === b.read) return (b.created_at ?? 0) - (a.created_at ?? 0)
+      return a.read ? 1 : -1
+    })
+  }
+
+  function handleSortChange(order: SortOrder, label: string) {
+    setSortOrder(order)
+    setSortLabel(label)
+  }
+
+  function handleSettingChange(key: SettingKey, value: boolean) {
+    localStorage.setItem(key, String(value))
+    setSettings((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function handleNotifClick(n: any) {
+    notifStore.markRead(n.id)
+    if (!n.notifiable) return
+    if (n.notifiable.type === 'post') {
+      navigate('/video/' + n.notifiable.id)
+    } else if (n.notifiable.type === 'creator_user') {
+      navigate('/creator/' + n.notifiable.id)
+    }
+  }
 
   return (
     <SgDsLibraryStack
@@ -116,7 +168,20 @@ export default function NotificationPage() {
                 </SgDsLibraryBadge>
               )}
             </SgDsLibraryStack>
-            <SgDsLibraryButton shape="pill" variant="soft" size="md" leadingIcon="ellipsis" iconOnly aria-label="더보기" />
+            <SgDsLibraryButtonPopover
+              leadingIcon="ellipsis"
+              iconOnly
+              placement="bottom-end"
+              buttonLabel="더보기"
+              buttonShape="pill"
+              buttonSize="md"
+              buttonVariant="soft"
+              closeOnItemClick={true}
+            >
+              <SgDsLibraryPopoverList>
+                <SgDsLibraryPopoverItem icon="check-check" onClick={() => notifStore.readAll()}>모두 읽음</SgDsLibraryPopoverItem>
+              </SgDsLibraryPopoverList>
+            </SgDsLibraryButtonPopover>
           </SgDsLibraryStack>
 
           {/* BODY: main feed + settings aside */}
@@ -164,10 +229,10 @@ export default function NotificationPage() {
                       </SgDsLibraryTab>
                     ))}
                   </SgDsLibraryTabsList>
-                  <SgDsLibraryButtonPopover trailingIcon="chevron-down" placement="bottom-end" buttonLabel="최신순" buttonShape="pill" buttonSize="sm" buttonVariant="soft" closeOnItemClick={true}>
+                  <SgDsLibraryButtonPopover trailingIcon="chevron-down" placement="bottom-end" buttonLabel={sortLabel} buttonShape="pill" buttonSize="sm" buttonVariant="soft" closeOnItemClick={true}>
                     <SgDsLibraryPopoverList>
-                      <SgDsLibraryPopoverItem icon="clock">최신순</SgDsLibraryPopoverItem>
-                      <SgDsLibraryPopoverItem icon="bell-dot">안읽음 먼저</SgDsLibraryPopoverItem>
+                      <SgDsLibraryPopoverItem icon="clock" onClick={() => handleSortChange('latest', '최신순')}>최신순</SgDsLibraryPopoverItem>
+                      <SgDsLibraryPopoverItem icon="bell-dot" onClick={() => handleSortChange('unread_first', '안읽음 먼저')}>안읽음 먼저</SgDsLibraryPopoverItem>
                     </SgDsLibraryPopoverList>
                   </SgDsLibraryButtonPopover>
                 </SgDsLibraryTabsBar>
@@ -201,7 +266,7 @@ export default function NotificationPage() {
                                   padding="md"
                                   radius="md"
                                   style={{ cursor: 'pointer' }}
-                                  onClick={() => notifStore.markRead(n.id)}
+                                  onClick={() => handleNotifClick(n)}
                                 >
                                   <SgDsLibraryStack direction="row" align="center" gap="xs" width="auto" style={{ flex: '0 0 auto' }}>
                                     {isUnread && (
@@ -284,10 +349,30 @@ export default function NotificationPage() {
                   <SgDsLibraryText lineHeight="1em" as="h3" variant="ui" weight="semibold">알림 설정</SgDsLibraryText>
                 </SgDsLibraryStack>
                 <SgDsLibraryStack direction="column" gap="sm">
-                  <SgDsLibrarySwitch defaultChecked={true} size="md" label="새 작품" />
-                  <SgDsLibrarySwitch defaultChecked size="md" label="구독 갱신 안내" />
-                  <SgDsLibrarySwitch defaultChecked size="md" label="답글·댓글" />
-                  <SgDsLibrarySwitch size="md" label="yovo 소식" />
+                  <SgDsLibrarySwitch
+                    size="md"
+                    label="새 작품"
+                    checked={settings.notif_new_post}
+                    onChange={(e: any) => handleSettingChange('notif_new_post', e.target.checked)}
+                  />
+                  <SgDsLibrarySwitch
+                    size="md"
+                    label="구독 갱신 안내"
+                    checked={settings.notif_subscription}
+                    onChange={(e: any) => handleSettingChange('notif_subscription', e.target.checked)}
+                  />
+                  <SgDsLibrarySwitch
+                    size="md"
+                    label="답글·댓글"
+                    checked={settings.notif_comments}
+                    onChange={(e: any) => handleSettingChange('notif_comments', e.target.checked)}
+                  />
+                  <SgDsLibrarySwitch
+                    size="md"
+                    label="yovo 소식"
+                    checked={settings.notif_yovo}
+                    onChange={(e: any) => handleSettingChange('notif_yovo', e.target.checked)}
+                  />
                 </SgDsLibraryStack>
               </SgDsLibraryStack>
             </SgDsLibraryStack>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   SgDsLibraryStack,
   SgDsLibraryText,
@@ -28,9 +29,26 @@ function timeAgo(ms: number | null | undefined): string {
   return hours < 24 ? `${hours}시간 전` : `${Math.floor(hours / 24)}일 전`
 }
 
+const CATEGORY_TABS = [
+  { label: '전체', icon: 'layout-grid', value: null },
+  { label: '보이스드라마', icon: 'headphones', value: 'voice_drama' },
+  { label: '시네마틱', icon: 'clapperboard', value: 'cinematic' },
+  { label: 'ASMR', icon: 'ear', value: 'asmr' },
+  { label: '단편영상', icon: 'film', value: 'short_film' },
+  { label: '애니메이션', icon: 'sparkles', value: 'animation' },
+  { label: 'MV', icon: 'play', value: 'mv' },
+  { label: 'Vlog', icon: 'video', value: 'vlog' },
+] as const
+
+type SortKey = 'latest' | 'popular'
+
 export default function LibraryPage() {
+  const navigate = useNavigate()
   const libraryStore = useLibraryStore()
   const [selectedTab, setSelectedTab] = useState(0)
+  const [categoryIndex, setCategoryIndex] = useState(0)
+  const [sortKey, setSortKey] = useState<SortKey>('latest')
+  const [sortLabel, setSortLabel] = useState('최신순')
 
   useEffect(() => {
     libraryStore.fetchPurchased()
@@ -41,6 +59,32 @@ export default function LibraryPage() {
       libraryStore.fetchBookmarks()
     }
   }, [selectedTab])
+
+  function handleSort(key: SortKey, label: string) {
+    setSortKey(key)
+    setSortLabel(label)
+  }
+
+  function sortPosts(posts: any[]) {
+    if (sortKey === 'popular') {
+      return [...posts].sort((a, b) => (b.likes_count ?? 0) - (a.likes_count ?? 0))
+    }
+    return [...posts].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))
+  }
+
+  const selectedCategory = CATEGORY_TABS[categoryIndex]?.value ?? null
+
+  function filterPosts(posts: any[]) {
+    if (!selectedCategory) return posts
+    return posts.filter((p: any) => p.content_type === selectedCategory)
+  }
+
+  const filteredPurchased = sortPosts(filterPosts(libraryStore.purchased))
+  const filteredBookmarks = sortPosts(filterPosts(libraryStore.bookmarks))
+
+  function sharePost(postId: string | number) {
+    navigator.clipboard.writeText(location.origin + '/video/' + postId)
+  }
 
   return (
     <SgDsLibraryStack
@@ -86,7 +130,6 @@ export default function LibraryPage() {
             <SgDsLibraryStack direction="column" gap="xs" flex="1 1 auto">
               <SgDsLibraryText as="h1" tone="primary" variant="heading-1" weight="bold" truncateLines="1" align="start">구매목록</SgDsLibraryText>
             </SgDsLibraryStack>
-            <SgDsLibraryButton shape="pill" variant="soft" size="md" leadingIcon="sliders-horizontal" iconOnly aria-label="라이브러리 설정" />
           </SgDsLibraryStack>
 
           {/* SCROLLING CONTENT */}
@@ -107,25 +150,22 @@ export default function LibraryPage() {
                 <SgDsLibraryTabsList style={{ width: '100%', paddingTop: 'var(--ds-spacing-space-1)', height: 'fit-content', borderStyle: 'none' }}>
                   <SgDsLibraryTab
                     leadingIcon="list-video"
-                    badgeText="10"
-                    badge={true}
+                    badgeText={String(libraryStore.purchased.length)}
+                    badge={libraryStore.purchased.length > 0}
                     badgeVariant="neutral"
                     selected={selectedTab === 0}
                     onClick={() => setSelectedTab(0)}
                   >구매한 작품</SgDsLibraryTab>
                   <SgDsLibraryTab
                     leadingIcon="bookmark"
-                    badgeText="8"
-                    badge={true}
+                    badgeText={String(libraryStore.bookmarks.length)}
+                    badge={libraryStore.bookmarks.length > 0}
                     badgeVariant="neutral"
                     selected={selectedTab === 1}
                     onClick={() => setSelectedTab(1)}
                   >즐겨찾기</SgDsLibraryTab>
                   <SgDsLibraryTab
                     leadingIcon="clock"
-                    badgeText="12"
-                    badge={true}
-                    badgeVariant="neutral"
                     selected={selectedTab === 2}
                     onClick={() => setSelectedTab(2)}
                   >최근 본</SgDsLibraryTab>
@@ -140,23 +180,22 @@ export default function LibraryPage() {
                     <SgDsLibraryStack flex="1 1 auto" minWidth="0">
                       <SgDsLibraryTabs ariaLabel="카테고리 필터" size="md" variant="pill">
                         <SgDsLibraryTabsList>
-                          <SgDsLibraryTab selected leadingIcon="layout-grid">전체</SgDsLibraryTab>
-                          <SgDsLibraryTab leadingIcon="headphones">보이스드라마</SgDsLibraryTab>
-                          <SgDsLibraryTab leadingIcon="clapperboard">시네마틱</SgDsLibraryTab>
-                          <SgDsLibraryTab leadingIcon="ear">ASMR</SgDsLibraryTab>
-                          <SgDsLibraryTab leadingIcon="film">단편영상</SgDsLibraryTab>
-                          <SgDsLibraryTab leadingIcon="sparkles">애니메이션</SgDsLibraryTab>
-                          <SgDsLibraryTab leadingIcon="play">MV</SgDsLibraryTab>
-                          <SgDsLibraryTab leadingIcon="video">Vlog</SgDsLibraryTab>
+                          {CATEGORY_TABS.map((cat, idx) => (
+                            <SgDsLibraryTab
+                              key={cat.label}
+                              selected={categoryIndex === idx}
+                              leadingIcon={cat.icon}
+                              onClick={() => setCategoryIndex(idx)}
+                            >{cat.label}</SgDsLibraryTab>
+                          ))}
                         </SgDsLibraryTabsList>
                       </SgDsLibraryTabs>
                     </SgDsLibraryStack>
                     <SgDsLibrarySectionTitleGroup align="end">
-                      <SgDsLibraryButtonPopover trailingIcon="chevron-down" placement="bottom-end" buttonLabel="최신순" buttonShape="default" buttonSize="sm" buttonVariant="ghost" closeOnItemClick={true}>
+                      <SgDsLibraryButtonPopover trailingIcon="chevron-down" placement="bottom-end" buttonLabel={sortLabel} buttonShape="default" buttonSize="sm" buttonVariant="ghost" closeOnItemClick={true}>
                         <SgDsLibraryPopoverList>
-                          <SgDsLibraryPopoverItem icon="clock">최신순</SgDsLibraryPopoverItem>
-                          <SgDsLibraryPopoverItem icon="flame">인기순</SgDsLibraryPopoverItem>
-                          <SgDsLibraryPopoverItem icon="sparkles">추천순</SgDsLibraryPopoverItem>
+                          <SgDsLibraryPopoverItem icon="clock" onClick={() => handleSort('latest', '최신순')}>최신순</SgDsLibraryPopoverItem>
+                          <SgDsLibraryPopoverItem icon="flame" onClick={() => handleSort('popular', '인기순')}>인기순</SgDsLibraryPopoverItem>
                         </SgDsLibraryPopoverList>
                       </SgDsLibraryButtonPopover>
                     </SgDsLibrarySectionTitleGroup>
@@ -168,25 +207,25 @@ export default function LibraryPage() {
                   )}
 
                   {/* 빈 상태 */}
-                  {!libraryStore.loading && libraryStore.purchased.length === 0 && (
+                  {!libraryStore.loading && filteredPurchased.length === 0 && (
                     <SgDsLibraryText tone="tertiary">구매한 작품이 없습니다.</SgDsLibraryText>
                   )}
 
                   {/* CARD GRID */}
-                  {libraryStore.purchased.length > 0 && (
+                  {filteredPurchased.length > 0 && (
                     <SgDsLibraryCardGrid
                       itemMinSize="200px"
                       itemMaxSize="280px"
                       style={{ width: '100%' }}
                       cols="4"
-                      count={String(libraryStore.purchased.length)}
+                      count={String(filteredPurchased.length)}
                       itemSize="auto"
                       layout="grid"
                       gap="sm"
                       arrows={false}
                       scroll="smooth"
                     >
-                      {libraryStore.purchased.map((post: any) => (
+                      {filteredPurchased.map((post: any) => (
                         <SgDsLibraryStack
                           key={post.id}
                           as="article"
@@ -197,7 +236,7 @@ export default function LibraryPage() {
                           <SgDsLibraryVideoListCard
                             thumbnailImageUrl={post.locked_thumbnail_url ?? undefined}
                             avatarSrc={post.creator_user?.profile_image ?? undefined}
-                            style={{ height: 'fit-content' }}
+                            style={{ height: 'fit-content', cursor: 'pointer' }}
                             title={post.title_ko ?? post.title ?? ''}
                             creatorName={post.creator_user?.nickname ?? ''}
                             meta={timeAgo(post.created_at)}
@@ -213,6 +252,9 @@ export default function LibraryPage() {
                             avatarShape="circle"
                             actionIcon="ellipsis"
                             showAction={true}
+                            onClick={() => navigate('/video/' + post.id)}
+                            onAvatarClick={() => post.creator_user?.id && navigate('/creator/' + post.creator_user.id)}
+                            onActionClick={() => sharePost(post.id)}
                           />
                         </SgDsLibraryStack>
                       ))}
@@ -242,23 +284,23 @@ export default function LibraryPage() {
                   {libraryStore.loading && libraryStore.bookmarks.length === 0 && (
                     <SgDsLibraryText tone="tertiary">불러오는 중...</SgDsLibraryText>
                   )}
-                  {!libraryStore.loading && libraryStore.bookmarks.length === 0 && (
+                  {!libraryStore.loading && filteredBookmarks.length === 0 && (
                     <SgDsLibraryText tone="tertiary">즐겨찾기한 작품이 없습니다.</SgDsLibraryText>
                   )}
-                  {libraryStore.bookmarks.length > 0 && (
+                  {filteredBookmarks.length > 0 && (
                     <SgDsLibraryCardGrid
                       itemMinSize="200px"
                       itemMaxSize="280px"
                       style={{ width: '100%' }}
                       cols="4"
-                      count={String(libraryStore.bookmarks.length)}
+                      count={String(filteredBookmarks.length)}
                       itemSize="auto"
                       layout="grid"
                       gap="sm"
                       arrows={false}
                       scroll="smooth"
                     >
-                      {libraryStore.bookmarks.map((post: any) => (
+                      {filteredBookmarks.map((post: any) => (
                         <SgDsLibraryStack
                           key={post.id}
                           as="article"
@@ -269,7 +311,7 @@ export default function LibraryPage() {
                           <SgDsLibraryVideoListCard
                             thumbnailImageUrl={post.locked_thumbnail_url ?? undefined}
                             avatarSrc={post.creator_user?.profile_image ?? undefined}
-                            style={{ height: 'fit-content' }}
+                            style={{ height: 'fit-content', cursor: 'pointer' }}
                             title={post.title_ko ?? post.title ?? ''}
                             creatorName={post.creator_user?.nickname ?? ''}
                             meta={timeAgo(post.created_at)}
@@ -285,6 +327,9 @@ export default function LibraryPage() {
                             avatarShape="circle"
                             actionIcon="ellipsis"
                             showAction={true}
+                            onClick={() => navigate('/video/' + post.id)}
+                            onAvatarClick={() => post.creator_user?.id && navigate('/creator/' + post.creator_user.id)}
+                            onActionClick={() => sharePost(post.id)}
                           />
                         </SgDsLibraryStack>
                       ))}

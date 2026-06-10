@@ -145,8 +145,6 @@ export default function AppLayout() {
               closeOnItemClick
             >
               <SgDsLibraryPopoverList>
-                <SgDsLibraryPopoverItem icon="circle-user">프로필</SgDsLibraryPopoverItem>
-                <SgDsLibraryPopoverItem icon="layout-dashboard">대시보드</SgDsLibraryPopoverItem>
                 <SgDsLibraryPopoverItem icon="log-out" onClick={handleLogout}>
                   로그아웃
                 </SgDsLibraryPopoverItem>

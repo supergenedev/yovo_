@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { HTMLAttributes, ReactNode } from 'react';
 import { SgDsLibraryAvatar, type SgDsLibraryAvatarTone } from './Avatar';
 import { SgDsLibraryButton } from './Button';
@@ -31,6 +32,11 @@ export type SgDsLibraryCommentInputProps = Omit<HTMLAttributes<HTMLDivElement>, 
   submitLabel?: ReactNode;
   textareaId?: string;
   textareaLabel?: string;
+  /* 제출 콜백 — 현재 입력 텍스트를 전달하고, 비제어 모드면 입력을 비운다 */
+  value?: string;
+  onValueChange?: (text: string) => void;
+  onSubmit?: (text: string) => void;
+  onCancel?: () => void;
 };
 
 export function SgDsLibraryCommentInput(rawProps: SgDsLibraryCommentInputProps) {
@@ -61,11 +67,25 @@ export function SgDsLibraryCommentInput(rawProps: SgDsLibraryCommentInputProps) 
     submitLabel = '등록',
     textareaId,
     textareaLabel = '댓글 입력',
+    value,
+    onValueChange,
+    onSubmit,
+    onCancel,
     ...props
   } = resolveWorkbenchModeProps(rawProps);
+  const [innerValue, setInnerValue] = useState(defaultValue);
+  const currentValue = value ?? innerValue;
   const normalizedMaxLength = normalizeOptionalNumber(maxLength);
   const hasTools = showAttachment || showEmoji || showMention;
-  const counter = showCounter && normalizedMaxLength ? `${defaultValue.length}/${normalizedMaxLength}` : '';
+  const counter = showCounter && normalizedMaxLength ? `${currentValue.length}/${normalizedMaxLength}` : '';
+
+  const handleSubmit = () => {
+    if (!onSubmit) return;
+    const text = currentValue.trim();
+    if (!text) return;
+    onSubmit(text);
+    if (value === undefined) setInnerValue('');
+  };
   const hasMeta = Boolean(helperText || counter);
   const lockControls = disabled || readOnly;
 
@@ -91,7 +111,14 @@ export function SgDsLibraryCommentInput(rawProps: SgDsLibraryCommentInputProps) 
           className="comment-input-textarea"
           aria-label={textareaLabel}
           autoFocus={autoFocus}
-          defaultValue={defaultValue}
+          value={currentValue}
+          onChange={(e) => {
+            setInnerValue(e.target.value);
+            onValueChange?.(e.target.value);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit();
+          }}
           disabled={disabled}
           maxLength={normalizedMaxLength}
           placeholder={placeholder}
@@ -157,15 +184,17 @@ export function SgDsLibraryCommentInput(rawProps: SgDsLibraryCommentInputProps) 
                 label={cancelLabel}
                 size="sm"
                 variant="ghost"
+                onClick={onCancel}
               />
             ) : null}
             <SgDsLibraryButton
               className="comment-input-submit"
-              disabled={disabled || submitDisabled || readOnly}
+              disabled={disabled || submitDisabled || readOnly || (onSubmit ? !currentValue.trim() : false)}
               label={submitLabel}
               leadingIcon="send"
               size="sm"
               variant="primary"
+              onClick={handleSubmit}
             />
           </div>
         </div>
