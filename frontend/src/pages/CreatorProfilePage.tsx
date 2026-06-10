@@ -36,18 +36,20 @@ export default function CreatorProfilePage() {
 
   const { follow, unfollow } = useCreatorStore()
 
+  // id 변경 시 로컬 상태를 동기적으로 먼저 리셋, 그 다음 fetch
   useEffect(() => {
     if (!id) return
-    fetchCreatorUser(id).then(() => {
-      const creator = useCreatorStore.getState().currentCreator
-      setFollowing(creator?.interaction_with_me?.is_following ?? false)
-      setFollowId(creator?.interaction_with_me?.follow_id ?? null)
-    })
-    fetchPosts(id, 1)
-    // reset posts when id changes
     setPosts([])
     setPostsMeta(null)
+    fetchCreatorUser(id)
+    fetchPosts(id, 1)
   }, [id])
+
+  // currentCreator 변경에 맞춰 팔로우 로컬 상태 동기화
+  useEffect(() => {
+    setFollowing(currentCreator?.interaction_with_me?.is_following ?? false)
+    setFollowId(currentCreator?.interaction_with_me?.follow_id ?? null)
+  }, [currentCreator])
 
   async function fetchPosts(creatorId: string, page: number) {
     setPostsLoading(true)

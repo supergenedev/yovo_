@@ -34,6 +34,9 @@ export default function CreatorPage() {
   useEffect(() => {
     fetchRecommended()
     fetchDiscover()
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    }
   }, [fetchRecommended, fetchDiscover])
 
   function handleSearch(value: string) {

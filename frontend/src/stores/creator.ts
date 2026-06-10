@@ -36,7 +36,8 @@ export const useCreatorStore = create<CreatorState>((set, get) => ({
   hasMorePosts: () => get().postsMeta?.next != null,
 
   async fetchCreatorUser(id) {
-    set({ creatorLoading: true })
+    // 프로필 간 이동 시 이전 크리에이터가 잠깐 표시되는 문제 방지
+    set({ creatorLoading: true, currentCreator: null })
     try {
       const res = await apiFetch(`/api/v/creator_users/${id}`)
       set({ currentCreator: res.creator_user })
@@ -48,6 +49,7 @@ export const useCreatorStore = create<CreatorState>((set, get) => ({
   },
 
   async fetchCreatorPosts(id, page = 1) {
+    if (page === 1) set({ posts: [], postsMeta: null })
     set({ postsLoading: true })
     try {
       const res = await apiFetch(`/api/v/creator_users/${id}/posts`, { query: { page } })

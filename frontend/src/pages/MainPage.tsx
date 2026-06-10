@@ -95,9 +95,9 @@ export default function MainPage() {
 
   function handleTabChange(idx: number) {
     setActiveTab(idx)
-    if (idx === 0) feedStore.fetchDiscover()
-    else if (idx === 1) feedStore.fetchFeed()
-    else if (idx === 2) feedStore.fetchFeed()
+    if (idx === 0) feedStore.fetchDiscover(1)
+    else if (idx === 1) feedStore.fetchFeed(1)   // 서포터 전용: 팔로우 피드
+    else if (idx === 2) feedStore.fetchFeed(1)   // 구독중: 팔로우 피드
   }
 
   function sortLabel(): string {
@@ -431,7 +431,7 @@ export default function MainPage() {
                   </SgDsLibraryPostStack>
                 </SgDsLibraryStack>
 
-                {/* Load more */}
+                {/* Load more — 맞춤추천 탭은 fetchDiscover 직접 호출 */}
                 {feedStore.hasMore() && (
                   <SgDsLibraryStack direction="row" justify="center" padding="var(--ds-spacing-space-4)">
                     <SgDsLibraryButton
@@ -439,7 +439,7 @@ export default function MainPage() {
                       size="sm"
                       label="더 불러오기"
                       trailingIcon="chevron-down"
-                      onClick={() => feedStore.loadMore()}
+                      onClick={() => feedStore.fetchDiscover((feedStore.meta?.page ?? 1) + 1)}
                     />
                   </SgDsLibraryStack>
                 )}

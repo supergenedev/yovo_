@@ -80,10 +80,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     try {
       await apiFetch(`/api/v/notifications/${id}`, { method: 'PATCH', body: { read: true } })
       set((s) => {
-        const target = s.notifications.find((n) => n.id === id)
+        // id가 문자열/숫자 혼재할 수 있어 String으로 통일 비교
+        const target = s.notifications.find((n) => String(n.id) === String(id))
         if (!target || target.read) return s
         return {
-          notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
+          notifications: s.notifications.map((n) => (String(n.id) === String(id) ? { ...n, read: true } : n)),
           unreadCount: Math.max(0, s.unreadCount - 1),
         }
       })

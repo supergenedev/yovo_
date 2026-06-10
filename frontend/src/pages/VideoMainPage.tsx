@@ -62,6 +62,9 @@ export default function VideoMainPage() {
 
   useEffect(() => {
     fetchVideoPosts()
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
   }, [])
 
   function handleSearchChange(value: string) {

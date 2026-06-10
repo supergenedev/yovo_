@@ -42,7 +42,9 @@ export const useVideoStore = create<VideoState>((set, get) => ({
   },
 
   async fetchPost(id) {
-    set({ postLoading: true })
+    // 이전 포스트가 잠깐 보이거나 <video>가 백그라운드에서 계속 재생되는 문제 방지:
+    // 새 포스트 로드 시작 시 즉시 비운다 (video 엘리먼트 언마운트 유도)
+    set({ postLoading: true, currentPost: null })
     try {
       const res = await apiFetch(`/api/v/posts/${id}`)
       set({ currentPost: res.post })

@@ -79,14 +79,14 @@ export default function VideoPage() {
   const liked = post?.interaction_with_me?.liked ?? false
   const bookmarked = post?.interaction_with_me?.bookmarked ?? false
 
-  // buyer_only and not yet seen/purchased
-  const showPurchaseAlert = post?.view_type === 'buyer_only' && !(post?.interaction_with_me?.seen)
+  // buyer_only and not yet purchased
+  const showPurchaseAlert = post?.view_type === 'buyer_only' && !(post?.interaction_with_me?.purchased)
 
   // find video media
   const videoMedia = post?.media?.find((m: any) => m.content_type?.startsWith('video/'))
   const imageMedia = post?.media?.find((m: any) => m.content_type?.startsWith('image/'))
   const thumbnailSrc = imageMedia?.url ?? post?.thumbnail_url ?? ''
-  const isLocked = post?.view_type === 'buyer_only' && !post?.interaction_with_me?.seen && (!post?.media || post.media.length === 0)
+  const isLocked = post?.view_type === 'buyer_only' && !post?.interaction_with_me?.purchased && (!post?.media || post.media.length === 0)
 
   useEffect(() => {
     if (!id) return
@@ -300,6 +300,7 @@ export default function VideoPage() {
                   <div style={{ position: 'relative', width: '100%' }}>
                     {videoMedia ? (
                       <video
+                        key={post.id}
                         controls
                         src={videoMedia.url}
                         poster={thumbnailSrc}

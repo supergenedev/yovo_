@@ -12,16 +12,19 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  userId: null,
+  // 새로고침 후에도 DM 발신자 판별 등이 동작하도록 userId도 영속화한다
+  userId: localStorage.getItem('auth_user_id'),
   token: localStorage.getItem('auth_token'),
 
   setAuth({ id, token }) {
     localStorage.setItem('auth_token', token)
-    set({ userId: id, token })
+    localStorage.setItem('auth_user_id', String(id))
+    set({ userId: String(id), token })
   },
 
   clearAuth() {
     localStorage.removeItem('auth_token')
+    localStorage.removeItem('auth_user_id')
     set({ userId: null, token: null })
   },
 

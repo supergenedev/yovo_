@@ -36,10 +36,13 @@ export const useDmStore = create<DmState>((set, get) => ({
   },
 
   async fetchMessages(roomId) {
-    set({ messagesLoading: true, error: null })
+    set({ messagesLoading: true, error: null, messages: [] })
     try {
       const res = await apiFetch(`/api/v/chat_rooms/${roomId}/chats`)
-      set({ messages: res.data ?? [] })
+      // 방을 빠르게 전환하면 늦게 도착한 응답이 다른 방 메시지를 덮어쓴다 — 현재 방일 때만 반영
+      if (String(get().currentRoom?.id) === String(roomId)) {
+        set({ messages: res.data ?? [] })
+      }
     } catch (e) {
       set({ error: e })
     } finally {
