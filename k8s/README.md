@@ -69,6 +69,17 @@ kubectl apply -f k8s/deployment.yaml
 kubectl exec -n yovo-dev deploy/yovo-backend -- bin/rails db:seed
 ```
 
+### 최초 구축 시 주의 (이미 처리됨 — 재구축할 때만)
+
+- **solid_queue/solid_cache 스키마**: 4개 논리 DB가 같은 DATABASE_URL을 공유하는 구성이라
+  `db:prepare`가 primary만 만들고 queue/cache 스키마를 건너뛴다. 수동 로드 필요:
+  ```bash
+  kubectl exec -n yovo-dev deploy/yovo-backend -- \
+    env DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bin/rails db:schema:load:queue db:schema:load:cache
+  ```
+- **PVC 권한**: Rails 컨테이너는 uid 1000으로 실행되므로 backend pod에 `fsGroup: 1000`이
+  설정돼 있어야 `/rails/storage` 쓰기가 된다 (manifest에 반영됨).
+
 ## 구조 메모
 
 - 웹은 빌드 타임 `VITE_API_BASE_URL`로 API 도메인을 직접 호출한다 (mecha 패턴).

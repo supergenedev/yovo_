@@ -35,6 +35,9 @@ spec:
       labels:
         app: yovo-backend
     spec:
+      # Rails 이미지는 uid 1000(rails)로 실행 — PVC를 그룹 쓰기 가능하게 chown
+      securityContext:
+        fsGroup: 1000
       containers:
         - name: backend
           image: 414140062450.dkr.ecr.ap-northeast-1.amazonaws.com/yovo:backend
