@@ -78,11 +78,13 @@ export default function CreatorProfilePage() {
   async function handleDm() {
     if (!currentCreator) return
     try {
-      await apiFetch('/api/v/chat_rooms', {
+      const res = await apiFetch('/api/v/chat_rooms', {
         method: 'POST',
         body: { creator_user_id: currentCreator.id },
       })
-      navigate('/dm')
+      // 생성/조회된 방을 DM 화면에서 바로 열도록 id를 넘긴다
+      const roomId = res?.chat_room?.id ?? res?.id
+      navigate(roomId ? `/dm?room=${roomId}` : '/dm')
     } catch (e) {
       console.error('handleDm error:', e)
     }

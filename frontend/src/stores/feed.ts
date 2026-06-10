@@ -21,7 +21,9 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   hasMore: () => get().meta?.next != null,
 
   async fetchFeed(page = 1) {
-    set({ loading: true, error: null })
+    // 탭 전환 시 이전 탭 포스트가 잠깐 보였다가 교체되는 '따닥' 현상 방지:
+    // 1페이지 로드는 목록을 즉시 비우고 로딩 상태로 전환한다
+    set({ loading: true, error: null, ...(page === 1 ? { posts: [], meta: null } : {}) })
     try {
       const res = await apiFetch('/api/v/feeds', { query: { page } })
       set((s) => ({
@@ -36,7 +38,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   },
 
   async fetchDiscover(page = 1) {
-    set({ loading: true, error: null })
+    set({ loading: true, error: null, ...(page === 1 ? { posts: [], meta: null } : {}) })
     try {
       const res = await apiFetch('/api/v/feeds/discover', { query: { page } })
       set((s) => ({

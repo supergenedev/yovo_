@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   SgDsLibraryStack,
   SgDsLibraryText,
@@ -64,6 +64,7 @@ export default function DmPage() {
   const userId = useAuthStore((s) => s.userId)
   const meUser = useMeStore((s) => s.user)
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [messageInput, setMessageInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -79,6 +80,18 @@ export default function DmPage() {
   useEffect(() => {
     dmStore.fetchChatRooms()
   }, [])
+
+  // ?room=ID 로 진입하면 (크리에이터 프로필의 '메시지' 버튼) 해당 방을 자동으로 연다
+  useEffect(() => {
+    const roomId = searchParams.get('room')
+    if (!roomId || dmStore.chatRooms.length === 0) return
+    const room = (dmStore.chatRooms as any[]).find((r) => String(r.id) === String(roomId))
+    if (room && String(dmStore.currentRoom?.id) !== String(roomId)) {
+      dmStore.selectRoom(room)
+    }
+    setSearchParams({}, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, dmStore.chatRooms])
 
   // Scroll to bottom whenever messages change or room changes
   useEffect(() => {

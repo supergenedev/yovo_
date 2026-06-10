@@ -6,11 +6,15 @@ module Api
       attribute :access_token, if: :access_token_present?
 
       attribute :profile_image do
-        object.profile_image.attached? ? url_for(object.profile_image) : nil
+        if object.profile_image.attached?
+          Rails.application.routes.url_helpers.rails_blob_path(object.profile_image, only_path: true)
+        end
       end
 
       attribute :banner_image do
-        object.banner_image.attached? ? url_for(object.banner_image) : nil
+        if object.banner_image.attached?
+          Rails.application.routes.url_helpers.rails_blob_path(object.banner_image, only_path: true)
+        end
       end
 
       def access_token_present?

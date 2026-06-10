@@ -9,7 +9,11 @@ module Api
       end
 
       attribute :profile_image do
-        object.profile_image.attached? ? url_for(object.profile_image) : nil
+        # url_for는 host 설정이 필요한 절대 URL이라, /rails 프록시를 타는
+        # 상대 경로로 통일한다 (PostSerializer media와 동일 방식)
+        if object.profile_image.attached?
+          Rails.application.routes.url_helpers.rails_blob_path(object.profile_image, only_path: true)
+        end
       end
 
       attribute :tags do
