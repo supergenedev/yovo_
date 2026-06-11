@@ -123,6 +123,23 @@ module Api
         assert_equal [], body["media"], "batch_seen으로 유료 미디어가 잠금 해제되면 안 된다 (구매 우회)"
       end
 
+      test "similar excludes self and same creator, prefers same content_type" do
+        @post.update!(content_type: :video)
+        same_type   = Post.create!(creator_user: creator_users(:bob_creator), title_ko: "같은 타입", status: :published, content_type: :video, view_type: :everyone)
+        other_type  = Post.create!(creator_user: creator_users(:bob_creator), title_ko: "다른 타입", status: :published, content_type: :text, view_type: :everyone)
+        same_author = Post.create!(creator_user: @post.creator_user, title_ko: "같은 작가", status: :published, content_type: :video, view_type: :everyone)
+
+        get "/api/v/posts/#{@post.id}/similar", headers: @headers
+        assert_response :success
+
+        ids = response.parsed_body["data"].map { |p| p["id"] }
+        assert_includes ids, same_type.id.to_s
+        refute_includes ids, @post.id.to_s, "자기 자신 제외"
+        refute_includes ids, same_author.id.to_s, "같은 크리에이터 제외"
+        # 같은 타입이 부족하면 다른 타입으로 채움
+        assert_includes ids, other_type.id.to_s
+      end
+
       test "batch_get returns posts for given ids" do
         post "/api/v/posts/batch_get", params: { post_ids: [ @post.id ] }, headers: @headers, as: :json
         assert_response :success

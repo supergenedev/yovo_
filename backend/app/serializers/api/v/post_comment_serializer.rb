@@ -7,7 +7,7 @@ module Api
         c = object.commenter
         next { type: object.commenter_type, id: object.commenter_id.to_s } unless c
 
-        profile_img = c.profile_image.attached? ? url_for(c.profile_image) : nil rescue nil
+        profile_img = c.profile_image.attached? ? Rails.application.routes.url_helpers.rails_blob_path(c.profile_image, only_path: true) : nil rescue nil
         {
           type:          object.commenter_type,
           id:            c.id.to_s,

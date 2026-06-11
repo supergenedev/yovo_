@@ -52,6 +52,22 @@ module Api
         default_success_render
       end
 
+      # 비슷한 작품: 같은 콘텐츠 타입의 발행작 중 같은 크리에이터 제외, 최신순.
+      # 모자라면 다른 타입의 최신작으로 채운다.
+      def similar
+        post = Post.find(params[:id])
+        base = Post.published.where.not(id: post.id)
+                   .where.not(creator_user_id: post.creator_user_id)
+                   .includes(:creator_user, media_attachments: :blob)
+        primary = base.where(content_type: post.content_type).ordered.limit(8).to_a
+        if primary.size < 8
+          filler = base.where.not(id: primary.map(&:id))
+                       .ordered.limit(8 - primary.size).to_a
+          primary += filler
+        end
+        render json: primary, each_serializer: PostSerializer, scope: current_user, root: "data", adapter: :json
+      end
+
       def batch_get
         posts = Post.published.where(id: Array(params[:post_ids]).first(100))
                     .includes(:creator_user, media_attachments: :blob)

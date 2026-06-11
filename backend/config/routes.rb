@@ -91,6 +91,7 @@ Rails.application.routes.draw do
         end
         member do
           post :purchase
+          get :similar
         end
       end
       resources :post_comments, only: [:destroy] do

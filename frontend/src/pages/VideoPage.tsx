@@ -43,9 +43,9 @@ function timeAgo(ms?: number | string | null): string {
   return hours < 24 ? `${hours}시간 전` : `${Math.floor(hours / 24)}일 전`
 }
 
-function formatDate(iso?: string | null): string {
-  if (!iso) return ''
-  const d = new Date(iso)
+function formatDate(value?: number | string | null): string {
+  if (!value) return ''
+  const d = new Date(Number(value) || value as string)
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
@@ -66,6 +66,7 @@ export default function VideoPage() {
   const { currentPost: post, postLoading, fetchPost, likePost, unlikePost, bookmarkPost, unbookmarkPost } = useVideoStore()
 
   const [creatorPosts, setCreatorPosts] = useState<any[]>([])
+  const [similarPosts, setSimilarPosts] = useState<any[]>([])
   const [comments, setComments] = useState<any[]>([])
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
 
@@ -94,6 +95,9 @@ export default function VideoPage() {
     apiFetch(`/api/v/posts/${id}/post_comments`)
       .then((res: any) => setComments(res.post_comments ?? res.data ?? []))
       .catch(() => setComments([]))
+    apiFetch(`/api/v/posts/${id}/similar`)
+      .then((res: any) => setSimilarPosts(res.data ?? []))
+      .catch(() => setSimilarPosts([]))
   }, [id])
 
   const prevCreatorId = useRef<any>(null)
@@ -107,6 +111,10 @@ export default function VideoPage() {
       })
       .catch(() => setCreatorPosts([]))
   }, [post?.creator_user?.id])
+
+  function postThumb(p: any): string {
+    return (p?.media ?? []).find((m: any) => m.content_type?.startsWith('image/'))?.url ?? p?.thumbnail_url ?? ''
+  }
 
   function toggleLike() {
     if (!id) return
@@ -244,7 +252,7 @@ export default function VideoPage() {
                   </SgDsLibraryBreadcrumbItem>
                 )}
                 <SgDsLibraryBreadcrumbItem>
-                  <SgDsLibraryBreadcrumbCurrent>{post?.title ?? '로딩 중...'}</SgDsLibraryBreadcrumbCurrent>
+                  <SgDsLibraryBreadcrumbCurrent>{post?.title_ko ?? (postLoading ? '로딩 중...' : '')}</SgDsLibraryBreadcrumbCurrent>
                 </SgDsLibraryBreadcrumbItem>
               </SgDsLibraryBreadcrumb>
             </SgDsLibraryStack>
@@ -286,7 +294,7 @@ export default function VideoPage() {
                     variant="flat"
                     icon="lock"
                     title="전체 재생은 구매 후 가능해요"
-                    message={purchaseError ?? `미리듣기 00:30 · 전체 ${post.duration ?? ''}`}
+                    message={purchaseError ?? `${post.content_price ?? 0} 코인으로 전체 시청할 수 있어요`}
                     actions={
                       <SgDsLibraryButton variant="primary" size="sm" shape="pill" onClick={handlePurchase}>
                         구매하기
@@ -376,6 +384,27 @@ export default function VideoPage() {
                   </div>
                 )}
 
+                {/* Title + creator */}
+                {post && (
+                  <SgDsLibraryStack direction="column" gap="sm" paddingTop="sm">
+                    <SgDsLibraryText as="h1" variant="heading-3" weight="bold">
+                      {post.title_ko ?? ''}
+                    </SgDsLibraryText>
+                    <SgDsLibraryUserBlock
+                      avatarSize="md"
+                      size="md"
+                      avatarSrc={post.creator_user?.profile_image ?? undefined}
+                      name={post.creator_user?.nickname ?? ''}
+                      meta={`${post.creator_user?.creator_type === 'official' ? '공식 크리에이터' : '크리에이터'} · 팔로워 ${post.creator_user?.followers_count ?? 0}`}
+                      initials={(post.creator_user?.nickname ?? 'C').slice(0, 2)}
+                      avatarTone="brand"
+                      verified={post.creator_user?.creator_type === 'official'}
+                      onClick={() => post.creator_user?.id && navigate(`/creator/${post.creator_user.id}`)}
+                      style={{ cursor: 'pointer', width: '100%' }}
+                    />
+                  </SgDsLibraryStack>
+                )}
+
                 {/* Stats row */}
                 <SgDsLibraryStack as="div" direction="column" align="stretch" justify="start" gap="none" padding="none" background="none">
                   <SgDsLibraryDivider variant="solid" orientation="horizontal" labelPosition="center" inset="none" />
@@ -383,7 +412,7 @@ export default function VideoPage() {
                     <SgDsLibraryStatList brandStat={true} style={{ width: '100%', flex: '0 0 auto' }} size="md">
                       <SgDsLibraryStat icon="heart" value={String(post?.likes_count ?? 0)} label="좋아요" />
                       <SgDsLibraryStat icon="message-circle" value={String(comments.length)} label="댓글" />
-                      <SgDsLibraryStat icon="eye" value={String(post?.views_count ?? 0)} label="조회" />
+                      <SgDsLibraryStat icon="gem" value={String(post?.tip_amount ?? 0)} label="후원" />
 
                       <SgDsLibraryToolbarGroup align="end">
                         <SgDsLibraryButton
@@ -391,19 +420,25 @@ export default function VideoPage() {
                           variant={liked ? 'soft' : 'ghost'}
                           size="md"
                           leadingIcon="heart"
-                          iconOnly
+                          style={liked ? { color: 'var(--p-color-brand-500, #ff0055)' } : undefined}
+                          aria-pressed={liked}
                           aria-label="좋아요"
                           onClick={toggleLike}
-                        />
+                        >
+                          좋아요 {post?.likes_count ?? 0}
+                        </SgDsLibraryButton>
                         <SgDsLibraryButton
                           shape="pill"
                           variant={bookmarked ? 'soft' : 'ghost'}
                           size="md"
                           leadingIcon="bookmark"
-                          iconOnly
+                          style={bookmarked ? { color: 'var(--p-color-brand-500, #ff0055)' } : undefined}
+                          aria-pressed={bookmarked}
                           aria-label="저장"
                           onClick={toggleBookmark}
-                        />
+                        >
+                          {bookmarked ? '저장됨' : '저장'}
+                        </SgDsLibraryButton>
                         <SgDsLibraryButtonPopover
                           leadingIcon="ellipsis"
                           iconOnly={true}
@@ -440,16 +475,16 @@ export default function VideoPage() {
                 <SgDsLibraryStack as="div" direction="column" align="stretch" justify="start" gap="sm" padding="none" background="none">
                   {/* Description */}
                   <SgDsLibraryStack as="section" direction="column" gap="sm">
-                    {post?.body && (
+                    {post?.body_ko && (
                       <SgDsLibraryText as="p" variant="body" tone="secondary" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>
-                        {post.body}
+                        {post.body_ko}
                       </SgDsLibraryText>
                     )}
 
                     {/* Tags */}
-                    {post?.tags && post.tags.length > 0 && (
+                    {(post?.creator_user?.tags?.length ?? 0) > 0 && (
                       <SgDsLibraryStack align="center" justify="start" direction="row" gap="xs" wrap={true}>
-                        {post.tags.map((tag: string) => (
+                        {post.creator_user.tags.map((tag: string) => (
                           <SgDsLibraryChip key={tag} icon="" tone="neutral" variant="default">
                             #{tag}
                           </SgDsLibraryChip>
@@ -459,53 +494,41 @@ export default function VideoPage() {
                   </SgDsLibraryStack>
 
                   {/* Meta card */}
-                  <SgDsLibraryCard variant="outline" padding="md" gap="none">
-                    {post?.published_at && (
-                      <>
-                        <SgDsLibraryStack style={{ height: '21px' }} direction="row" align="center" gap="md" paddingTop="sm" paddingBottom="sm">
-                          <SgDsLibraryText as="span" variant="body-sm" weight="regular" tone="tertiary" style={{ width: '90px', whiteSpace: 'nowrap' }}>공개일</SgDsLibraryText>
-                          <SgDsLibraryText as="span" variant="body" weight="regular" style={{ flex: 1, fontVariantNumeric: 'tabular-nums' }}>
-                            {formatDate(post.published_at)}
-                          </SgDsLibraryText>
-                        </SgDsLibraryStack>
-                        <SgDsLibraryDivider variant="dotted" />
-                      </>
-                    )}
-                    {post?.duration && (
-                      <>
-                        <SgDsLibraryStack direction="row" align="center" gap="md" paddingTop="sm" paddingBottom="sm">
-                          <SgDsLibraryText as="span" variant="body-sm" weight="regular" tone="tertiary" style={{ width: '90px', whiteSpace: 'nowrap' }}>재생시간</SgDsLibraryText>
-                          <SgDsLibraryText as="span" variant="body" weight="regular" style={{ flex: 1, fontVariantNumeric: 'tabular-nums' }}>
-                            {post.duration}
-                          </SgDsLibraryText>
-                        </SgDsLibraryStack>
-                        <SgDsLibraryDivider variant="dotted" />
-                      </>
-                    )}
-                    {post?.category && (
-                      <>
-                        <SgDsLibraryStack direction="row" align="center" gap="md" paddingTop="sm" paddingBottom="sm">
-                          <SgDsLibraryText as="span" variant="body-sm" weight="regular" tone="tertiary" style={{ width: '90px', whiteSpace: 'nowrap' }}>카테고리</SgDsLibraryText>
-                          <SgDsLibraryText as="span" variant="body" weight="regular" style={{ flex: 1 }}>
-                            {post.category}
-                          </SgDsLibraryText>
-                        </SgDsLibraryStack>
-                        <SgDsLibraryDivider variant="dotted" />
-                      </>
-                    )}
-                    {post?.tags && post.tags.length > 0 && (
-                      <SgDsLibraryStack justify="center" direction="row" gap="md" align="start" paddingTop="md" paddingBottom="sm">
-                        <SgDsLibraryText as="span" variant="body-sm" weight="regular" tone="tertiary" style={{ width: '90px', paddingTop: 6, whiteSpace: 'nowrap' }}>
-                          태그
+                  {post && (
+                    <SgDsLibraryCard variant="outline" padding="md" gap="none">
+                      <SgDsLibraryStack style={{ height: '21px' }} direction="row" align="center" gap="md" paddingTop="sm" paddingBottom="sm">
+                        <SgDsLibraryText as="span" variant="body-sm" weight="regular" tone="tertiary" style={{ width: '90px', whiteSpace: 'nowrap' }}>공개일</SgDsLibraryText>
+                        <SgDsLibraryText as="span" variant="body" weight="regular" style={{ flex: 1, fontVariantNumeric: 'tabular-nums' }}>
+                          {formatDate(post.created_at)}
                         </SgDsLibraryText>
-                        <SgDsLibraryStack direction="row" gap="xs" wrap={true} flex="1 1 auto" paddingTop="xs">
-                          {post.tags.map((tag: string) => (
-                            <SgDsLibraryChip key={tag} size="sm" tone="neutral" variant="default">#{tag}</SgDsLibraryChip>
-                          ))}
-                        </SgDsLibraryStack>
                       </SgDsLibraryStack>
-                    )}
-                  </SgDsLibraryCard>
+                      <SgDsLibraryDivider variant="dotted" />
+                      <SgDsLibraryStack direction="row" align="center" gap="md" paddingTop="sm" paddingBottom="sm">
+                        <SgDsLibraryText as="span" variant="body-sm" weight="regular" tone="tertiary" style={{ width: '90px', whiteSpace: 'nowrap' }}>콘텐츠</SgDsLibraryText>
+                        <SgDsLibraryText as="span" variant="body" weight="regular" style={{ flex: 1 }}>
+                          {({ video: '동영상', episode: '에피소드', audio: '오디오', image: '이미지', text: '텍스트' } as Record<string, string>)[post.content_type] ?? post.content_type}
+                        </SgDsLibraryText>
+                      </SgDsLibraryStack>
+                      <SgDsLibraryDivider variant="dotted" />
+                      <SgDsLibraryStack direction="row" align="center" gap="md" paddingTop="sm" paddingBottom="sm">
+                        <SgDsLibraryText as="span" variant="body-sm" weight="regular" tone="tertiary" style={{ width: '90px', whiteSpace: 'nowrap' }}>공개 범위</SgDsLibraryText>
+                        <SgDsLibraryText as="span" variant="body" weight="regular" style={{ flex: 1 }}>
+                          {({ everyone: '전체 공개', subscriber_only: '구독자 전용', buyer_only: '구매자 전용' } as Record<string, string>)[post.view_type] ?? post.view_type}
+                        </SgDsLibraryText>
+                      </SgDsLibraryStack>
+                      {(post.content_price ?? 0) > 0 && (
+                        <>
+                          <SgDsLibraryDivider variant="dotted" />
+                          <SgDsLibraryStack direction="row" align="center" gap="md" paddingTop="sm" paddingBottom="sm">
+                            <SgDsLibraryText as="span" variant="body-sm" weight="regular" tone="tertiary" style={{ width: '90px', whiteSpace: 'nowrap' }}>가격</SgDsLibraryText>
+                            <SgDsLibraryText as="span" variant="body" weight="semibold" style={{ flex: 1, fontVariantNumeric: 'tabular-nums' }}>
+                              {post.content_price} 코인
+                            </SgDsLibraryText>
+                          </SgDsLibraryStack>
+                        </>
+                      )}
+                    </SgDsLibraryCard>
+                  )}
 
                   <SgDsLibraryStack direction="row" justify="center" align="center" gap="sm" paddingTop="md">
                     <SgDsLibraryButton variant="ghost" size="sm" leadingIcon="triangle-alert" onClick={() => alert('접수되었습니다')}>신고하기</SgDsLibraryButton>
@@ -549,17 +572,17 @@ export default function VideoPage() {
                     {comments.map((c: any) => (
                       <div key={c.id}>
                         <SgDsLibraryComment
-                          author={c.user?.username ?? c.username ?? 'user'}
-                          avatarSrc={c.user?.avatar_url ?? ''}
+                          author={c.commenter?.nickname ?? c.commenter?.username ?? 'user'}
+                          avatarSrc={c.commenter?.profile_image ?? ''}
                           avatarTone="neutral"
-                          initials={(c.user?.username ?? 'U').slice(0, 2)}
+                          initials={(c.commenter?.nickname ?? 'U').slice(0, 2)}
                           time={timeAgo(c.created_at)}
-                          body={c.body ?? c.content ?? c.text ?? ''}
+                          body={c.text ?? ''}
                           likeCount={getCommentLikeCount(c, localLikeDelta)}
                           replyCount={c.replies_count ?? 0}
                           liked={isCommentLiked(c, localLikes)}
                           onLikeClick={() => handleCommentLike(c)}
-                          onReplyClick={() => setReplyTo({ id: c.id, username: c.user?.username ?? c.username ?? 'user' })}
+                          onReplyClick={() => setReplyTo({ id: c.id, username: c.commenter?.nickname ?? 'user' })}
                           onFlagClick={() => alert('접수되었습니다')}
                           onMoreClick={() => {}}
                         />
@@ -619,11 +642,11 @@ export default function VideoPage() {
                           key={p.id}
                           mediaSize="sm"
                           showAvatar={false}
-                          thumbnailImageUrl={p.thumbnail_url ?? ''}
+                          thumbnailImageUrl={postThumb(p)}
                           title={p.title_ko ?? p.title ?? ''}
                           creatorName={p.creator_user?.nickname ?? ''}
                           meta={`좋아요 ${p.likes_count ?? 0} · ${timeAgo(p.created_at)}`}
-                          duration={p.duration ?? ''}
+                          duration=''
                           progress={0}
                           progressLabel="Media progress"
                           actionLabel="More options"
@@ -681,9 +704,54 @@ export default function VideoPage() {
                       </SgDsLibraryButton>
                     </SgDsLibrarySectionTitleGroup>
                   </SgDsLibrarySectionTitle>
-                  <SgDsLibraryText as="p" variant="body-sm" tone="tertiary" style={{ padding: '0.5rem 0' }}>
-                    추천 작품을 불러오는 중...
-                  </SgDsLibraryText>
+                  {similarPosts.length > 0 ? (
+                    <SgDsLibraryCardGrid
+                      count={similarPosts.length}
+                      itemSize="custom"
+                      itemSizeOverride="240px"
+                      layout="row"
+                      gap="sm"
+                      arrows
+                      edgeFade="fade"
+                      scroll="snap"
+                    >
+                      {similarPosts.map((p: any) => (
+                        <SgDsLibraryVideoListCard
+                          key={p.id}
+                          mediaSize="sm"
+                          thumbnailImageUrl={postThumb(p)}
+                          title={p.title_ko ?? ''}
+                          creatorName={p.creator_user?.nickname ?? ''}
+                          meta={`좋아요 ${p.likes_count ?? 0} · ${timeAgo(p.created_at)}`}
+                          duration=""
+                          progress={0}
+                          progressLabel="Media progress"
+                          thumbnailAspect="16/9"
+                          avatarSrc={p.creator_user?.profile_image ?? ''}
+                          avatarAlt={p.creator_user?.nickname ?? ''}
+                          avatarInitials={(p.creator_user?.nickname ?? 'U').slice(0, 2)}
+                          creatorVerified={p.creator_user?.creator_type === 'official'}
+                          showGrain={true}
+                          variant="vertical"
+                          avatarTone="brand"
+                          titleLines="1"
+                          size="sm"
+                          avatarSize="sm"
+                          avatarShape="circle"
+                          thumbnailWidth="50%"
+                          thumbnailBackground="linear-gradient(140deg, #0c1429, #4c1d95 50%, #be185d)"
+                          showAction={false}
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => navigate(`/video/${p.id}`)}
+                          onAvatarClick={() => p.creator_user?.id && navigate(`/creator/${p.creator_user.id}`)}
+                        />
+                      ))}
+                    </SgDsLibraryCardGrid>
+                  ) : (
+                    <SgDsLibraryText as="p" variant="body-sm" tone="tertiary" style={{ padding: '0.5rem 0' }}>
+                      비슷한 작품이 아직 없어요
+                    </SgDsLibraryText>
+                  )}
                 </SgDsLibraryStack>
 
                 {/* Footer */}
