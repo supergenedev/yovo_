@@ -10,7 +10,7 @@ backend/tmp/
 backend/storage/
 backend/public/assets
 backend/config/master.key
-backend/.env
+backend/.env*
 
 # General
 .DS_Store

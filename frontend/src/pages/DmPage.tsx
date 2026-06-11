@@ -110,6 +110,9 @@ export default function DmPage() {
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
+    // 한글 등 IME 조합 중 Enter는 무시 — 조합 확정 이벤트까지 가로채면
+    // 마지막 글자가 중복 전송된다 ("반가워" → "반가워" + "워")
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()

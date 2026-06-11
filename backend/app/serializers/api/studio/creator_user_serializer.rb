@@ -9,7 +9,9 @@ module Api
       end
 
       attribute :profile_image do
-        object.profile_image.attached? ? url_for(object.profile_image) : nil
+        if object.profile_image.attached?
+          Rails.application.routes.url_helpers.rails_blob_path(object.profile_image, only_path: true)
+        end
       end
     end
   end

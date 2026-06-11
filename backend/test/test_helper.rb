@@ -4,8 +4,10 @@ require "rails/test_help"
 
 module ActiveSupport
   class TestCase
-    # Run tests in parallel with specified workers
-    parallelize(workers: :number_of_processors)
+    # PostgreSQL + macOS arm64 + ruby 3.4에서 fork된 병렬 워커가 pg로 접속하면
+    # connect_start에서 segfault가 난다(fork-safety 이슈). 병렬을 끈다.
+    # CI(Linux)에서 병렬을 쓰려면 PARALLEL_WORKERS 환경변수로 켤 수 있다.
+    parallelize(workers: Integer(ENV.fetch("PARALLEL_WORKERS", "1")))
 
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all

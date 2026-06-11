@@ -7033,6 +7033,19 @@
     transform: scale(1);
   }
 
+  /* floating dialog는 showModal() 없이 open 속성만으로 렌더되므로(별도 backdrop
+     div 사용) top-layer에 안 올라간다. position이 없으면 문서 흐름에 박혀
+     화면 밖/뒤로 가고 backdrop 블러만 남는다 → 직접 viewport 중앙에 고정. */
+  dialog.dialog[open][data-floating="true"] {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    z-index: calc(var(--c-dialog-z-index) + 1);
+  }
+  dialog.dialog[open][data-floating="true"][data-align="top"] {
+    inset: 10vh 0 auto 0;
+  }
+
   /* starting-style: animate IN from this state when [open] is applied */
   @starting-style {
     dialog.dialog[open] {

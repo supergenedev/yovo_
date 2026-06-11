@@ -117,6 +117,7 @@ export function SgDsLibraryCommentInput(rawProps: SgDsLibraryCommentInputProps) 
             onValueChange?.(e.target.value);
           }}
           onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing) return; // IME 조합 중 무시
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit();
           }}
           disabled={disabled}

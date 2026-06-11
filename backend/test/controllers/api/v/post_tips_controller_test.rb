@@ -40,6 +40,18 @@ module Api
         assert_response :bad_request
       end
 
+      test "tip succeeds and serializes avatar as relative path (no host needed)" do
+        user_coins(:bob_coin).update!(coin: 100)
+        @user.profile_image.attach(io: StringIO.new("img"), filename: "a.jpg", content_type: "image/jpeg")
+
+        post "/api/v/posts/#{@post.id}/post_tips",
+             params: { amount: 10 }, headers: @headers, as: :json
+        assert_response :success # url_for였다면 여기서 500 (Missing host)
+
+        img = response.parsed_body.dig("post_tip", "user", "profile_image")
+        assert_match %r{\A/rails/active_storage/}, img, "절대 URL이 아닌 상대 경로여야 한다"
+      end
+
       test "rejects non-positive amount" do
         post "/api/v/posts/#{@post.id}/post_tips",
              params: { amount: 0 }, headers: @headers, as: :json

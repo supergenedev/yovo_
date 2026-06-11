@@ -27,6 +27,8 @@ import {
   SgDsLibraryStory,
   SgDsLibraryStoryStrip,
   SgDsLibraryDialog,
+  SgDsLibraryAlert,
+  SgDsLibraryEmptyState,
   SgDsLibraryToast,
   SgDsLibraryToastRegion,
 } from '@/libraries/sg-ds-library/components'
@@ -73,6 +75,7 @@ export default function MainPage() {
   const [sortMode, setSortMode] = useState<SortMode>('recommend')
   const [shareToastPostId, setShareToastPostId] = useState<string | null>(null)
   const [tipDialogPostId, setTipDialogPostId] = useState<string | null>(null)
+  const [tipError, setTipError] = useState<string | null>(null)
   const [tipAmount, setTipAmount] = useState('100')
   const [tipLoading, setTipLoading] = useState(false)
   const [tipSuccess, setTipSuccess] = useState(false)
@@ -119,11 +122,19 @@ export default function MainPage() {
     setTimeout(() => setShareToastPostId(null), 2000)
   }
 
+  function closeTipDialog() {
+    setTipDialogPostId(null)
+    setTipAmount('100')
+    setTipSuccess(false)
+    setTipError(null)
+  }
+
   async function handleTipSubmit() {
     if (!tipDialogPostId) return
     const amount = parseInt(tipAmount, 10)
     if (!amount || amount <= 0) return
     setTipLoading(true)
+    setTipError(null)
     try {
       await apiFetch(`/api/v/posts/${tipDialogPostId}/post_tips`, {
         method: 'POST',
@@ -135,8 +146,16 @@ export default function MainPage() {
         setTipSuccess(false)
         setTipAmount('100')
       }, 1500)
-    } catch {
-      // silently fail
+    } catch (e: any) {
+      // 에러를 삼키면 블러 상태로 멈춘 것처럼 보인다 — 사유를 보여준다
+      const msg = e?.data?.message ?? ''
+      setTipError(
+        msg.includes('Insufficient')
+          ? '코인이 부족합니다. (현재 잔액은 내 프로필에서 확인할 수 있어요)'
+          : msg.includes('own post')
+            ? '내 포스트에는 후원할 수 없습니다.'
+            : msg || '후원 처리에 실패했습니다. 잠시 후 다시 시도해주세요.',
+      )
     } finally {
       setTipLoading(false)
     }
@@ -186,6 +205,8 @@ export default function MainPage() {
   const me = meStore.user
   const recommended = creatorStore.recommended
   const posts = sortedPosts(feedStore.posts)
+  // 서포터 전용 탭: 팔로우 피드 중 유료/멤버십(전체공개 아님) 콘텐츠만
+  const supporterPosts = posts.filter((p: any) => p.view_type && p.view_type !== 'everyone')
 
   return (
     <SgDsLibraryStack
@@ -202,16 +223,14 @@ export default function MainPage() {
           open={true}
           title="후원하기"
           description="크리에이터에게 크레딧을 후원합니다."
-          action1Label="취소"
-          action1Variant="ghost"
-          action2Label={tipSuccess ? '완료!' : tipLoading ? '처리 중...' : '후원'}
-          action2Variant="primary"
-          onAction1={() => { setTipDialogPostId(null); setTipAmount('100'); setTipSuccess(false) }}
-          onAction2={handleTipSubmit}
-          onDismiss={() => { setTipDialogPostId(null); setTipAmount('100'); setTipSuccess(false) }}
+          onDismiss={closeTipDialog}
           size="sm"
         >
+          {/* 액션 버튼을 본문 안에서 직접 제어한다. Dialog의 action2 prop은
+              콜백 완료와 무관하게 네이티브 dialog.close()를 호출해서
+              에러/성공 상태를 보여주기 전에 다이얼로그가 닫혀버린다. */}
           <SgDsLibraryStack direction="column" gap="md" padding="sm">
+            {tipError && <SgDsLibraryAlert status="danger" message={tipError} />}
             <SgDsLibraryText tone="secondary" variant="body-sm">후원 금액 (크레딧)</SgDsLibraryText>
             <SgDsLibraryInput
               type="number"
@@ -222,6 +241,12 @@ export default function MainPage() {
               shape="default"
               placeholder="100"
             />
+            <SgDsLibraryStack direction="row" justify="end" gap="sm" paddingTop="sm">
+              <SgDsLibraryButton variant="ghost" size="md" onClick={closeTipDialog} disabled={tipLoading}>취소</SgDsLibraryButton>
+              <SgDsLibraryButton variant="primary" size="md" onClick={handleTipSubmit} disabled={tipLoading || tipSuccess}>
+                {tipSuccess ? '완료!' : tipLoading ? '처리 중…' : '후원'}
+              </SgDsLibraryButton>
+            </SgDsLibraryStack>
           </SgDsLibraryStack>
         </SgDsLibraryDialog>
       )}
@@ -295,8 +320,8 @@ export default function MainPage() {
               />
               <SgDsLibraryTabsList label="Tabs">
                 <SgDsLibraryTab selected={activeTab === 0} onClick={() => handleTabChange(0)}>맞춤추천</SgDsLibraryTab>
-                <SgDsLibraryTab badge={true} badgeVariant="danger" badgeText="17" selected={activeTab === 1} onClick={() => handleTabChange(1)}>서포터 전용</SgDsLibraryTab>
-                <SgDsLibraryTab badge={true} badgeVariant="danger" badgeText="48" selected={activeTab === 2} onClick={() => handleTabChange(2)}>구독중</SgDsLibraryTab>
+                <SgDsLibraryTab selected={activeTab === 1} onClick={() => handleTabChange(1)}>서포터 전용</SgDsLibraryTab>
+                <SgDsLibraryTab selected={activeTab === 2} onClick={() => handleTabChange(2)}>구독중</SgDsLibraryTab>
               </SgDsLibraryTabsList>
             </SgDsLibraryStack>
 
@@ -471,17 +496,28 @@ export default function MainPage() {
             {/* Tab 1: 서포터 전용 */}
             <SgDsLibraryTabsPanel selected={activeTab === 1}>
               <SgDsLibraryPostStack style={{ height: '100%' }} newCount="0" showNewPill={false}>
-                {feedStore.loading && posts.length === 0 && (
+                {feedStore.loading && supporterPosts.length === 0 && (
                   <SgDsLibraryStack align="center" justify="center" padding="2xl">
                     <SgDsLibraryText tone="tertiary">피드를 불러오는 중...</SgDsLibraryText>
                   </SgDsLibraryStack>
                 )}
-                {!feedStore.loading && posts.length === 0 && (
-                  <SgDsLibraryStack align="center" justify="center" padding="2xl">
-                    <SgDsLibraryText tone="tertiary">서포터 전용 콘텐츠입니다.</SgDsLibraryText>
+                {!feedStore.loading && supporterPosts.length === 0 && (
+                  <SgDsLibraryStack align="center" justify="center" padding="2xl" style={{ paddingTop: 'var(--ds-spacing-space-12)' }}>
+                    <SgDsLibraryEmptyState
+                      showArt
+                      artIcon="gem"
+                      size="md"
+                      title="서포터 전용 콘텐츠가 아직 없어요"
+                      body="팔로우한 크리에이터의 멤버십·구매 콘텐츠가 여기에 모여요."
+                      actionsSlot={
+                        <SgDsLibraryButton variant="primary" size="sm" onClick={() => navigate('/creator')}>
+                          크리에이터 둘러보기
+                        </SgDsLibraryButton>
+                      }
+                    />
                   </SgDsLibraryStack>
                 )}
-                {posts.map((post: any) => {
+                {supporterPosts.map((post: any) => {
                   const card = mapPostToCard(post)
                   return (
                     <SgDsLibraryPostCard
@@ -521,8 +557,19 @@ export default function MainPage() {
                   </SgDsLibraryStack>
                 )}
                 {!feedStore.loading && posts.length === 0 && (
-                  <SgDsLibraryStack align="center" justify="center" padding="2xl">
-                    <SgDsLibraryText tone="tertiary">팔로우한 크리에이터의 새 포스트가 없습니다.</SgDsLibraryText>
+                  <SgDsLibraryStack align="center" justify="center" padding="2xl" style={{ paddingTop: 'var(--ds-spacing-space-12)' }}>
+                    <SgDsLibraryEmptyState
+                      showArt
+                      artIcon="user-plus"
+                      size="md"
+                      title="아직 팔로우한 크리에이터가 없어요"
+                      body="크리에이터를 팔로우하면 새 포스트가 여기에 모여요."
+                      actionsSlot={
+                        <SgDsLibraryButton variant="primary" size="sm" onClick={() => navigate('/creator')}>
+                          크리에이터 둘러보기
+                        </SgDsLibraryButton>
+                      }
+                    />
                   </SgDsLibraryStack>
                 )}
                 {posts.map((post: any) => {

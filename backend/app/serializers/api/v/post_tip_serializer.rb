@@ -11,7 +11,7 @@ module Api
         {
           nickname: object.user.nickname,
           username: object.user.username,
-          profile_image: object.user.profile_image.attached? ? Rails.application.routes.url_helpers.url_for(object.user.profile_image) : nil
+          profile_image: object.user.profile_image.attached? ? Rails.application.routes.url_helpers.rails_blob_path(object.user.profile_image, only_path: true) : nil
         }
       end
     end
