@@ -43,6 +43,15 @@ module Api
         assert_equal 77, response.parsed_body.dig("user_coin", "coin")
       end
 
+      test "sign_up works without manual jti and returns token" do
+        post "/api/v/users/sign_up",
+             params: { user: { email: "newbie@test.dev", password: "password123", nickname: "신규" } },
+             as: :json
+        assert_response :created
+        assert response.parsed_body.dig("user", "access_token").present?
+        assert User.find_by(email: "newbie@test.dev").jti.present?
+      end
+
       test "apply_creator creates pending creator and rejects duplicates" do
         fresh = User.create!(email: "applicant@example.com", password: "password123",
                              nickname: "지망생", jti: SecureRandom.uuid)
