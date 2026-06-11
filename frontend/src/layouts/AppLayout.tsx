@@ -126,7 +126,8 @@ export default function AppLayout() {
           <SgDsLibraryUserBlock
             avatarSize="md"
             avatarSrc={me.user?.profile_image ?? undefined}
-            style={{ width: '100%' }}
+            onClick={() => navigate('/me')}
+            style={{ width: '100%', cursor: 'pointer' }}
             name={me.user?.nickname ?? ''}
             meta={me.user?.username ? `@${me.user.username}` : '팬'}
             initials={getInitials(me.user?.nickname)}
@@ -145,6 +146,9 @@ export default function AppLayout() {
               closeOnItemClick
             >
               <SgDsLibraryPopoverList>
+                <SgDsLibraryPopoverItem icon="circle-user" onClick={() => navigate('/me')}>
+                  내 프로필
+                </SgDsLibraryPopoverItem>
                 <SgDsLibraryPopoverItem icon="log-out" onClick={handleLogout}>
                   로그아웃
                 </SgDsLibraryPopoverItem>

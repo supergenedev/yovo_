@@ -17,6 +17,15 @@ module Api
         end
       end
 
+      # 내 크리에이터 신청/활성 상태 (없으면 null) — 프로필 화면의 신청 버튼 분기용
+      attribute :creator_user do
+        next nil unless object.creator_user
+        {
+          id:     object.creator_user.id.to_s,
+          status: object.creator_user.status,
+        }
+      end
+
       def access_token_present?
         instance_options[:access_token].present?
       end

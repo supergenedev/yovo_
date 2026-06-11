@@ -12,6 +12,7 @@ import LibraryPage from '@/pages/LibraryPage'
 import NotificationPage from '@/pages/NotificationPage'
 import CreatePage from '@/pages/CreatePage'
 import DmPage from '@/pages/DmPage'
+import MePage from '@/pages/MePage'
 import TwoColumnGuide from '@/pages/guide/TwoColumnGuide'
 import ThreeColumnGuide from '@/pages/guide/ThreeColumnGuide'
 
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="/notification" element={<NotificationPage />} />
             <Route path="/create" element={<CreatePage />} />
             <Route path="/dm" element={<DmPage />} />
+            <Route path="/me" element={<MePage />} />
           </Route>
           <Route path="/guide/2col" element={<TwoColumnGuide />} />
           <Route path="/guide/3col" element={<ThreeColumnGuide />} />
