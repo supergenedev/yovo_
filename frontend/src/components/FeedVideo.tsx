@@ -20,8 +20,10 @@ export default function FeedVideo({ src, poster }: { src: string; poster?: strin
       preload="metadata"
       onClick={(e) => e.stopPropagation()}
       onLoadedMetadata={(e) => {
+        // 포스터가 있어도, 브라우저가 검은 첫 프레임을 칠하는 것을 막기 위해
+        // 항상 특정 지점(25%)으로 seek 해 실제 프레임을 그린다.
         const v = e.currentTarget
-        if (!poster && isFinite(v.duration) && v.duration > 0.2) {
+        if (isFinite(v.duration) && v.duration > 0.2) {
           previewSeekRef.current = true
           try { v.currentTime = previewPoint(v.duration) } catch { /* noop */ }
         }
@@ -36,7 +38,7 @@ export default function FeedVideo({ src, poster }: { src: string; poster?: strin
         if (!startedRef.current) {
           startedRef.current = true
           // 미리보기 지점이 아니라 처음부터 재생
-          if (!poster && v.currentTime > 0) {
+          if (v.currentTime > 0) {
             try { v.currentTime = 0 } catch { /* noop */ }
           }
         }

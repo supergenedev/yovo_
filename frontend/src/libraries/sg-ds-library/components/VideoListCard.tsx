@@ -33,6 +33,8 @@ export type SgDsLibraryVideoListCardProps = Omit<HTMLAttributes<HTMLElement>, 't
   /** 잠금(유료) 콘텐츠면 썸네일에 잠금 오버레이를 표시한다. */
   locked?: boolean;
   lockIcon?: string;
+  /** 영상 URL을 주면 썸네일을 정지된 영상 프레임(특정 지점)으로 렌더한다. */
+  videoSrc?: string;
   creatorBadge?: ReactNode;
   creatorBadgeStatus?: SgDsLibraryBadgeStatus;
   creatorBadgeVariant?: SgDsLibraryBadgeVariant;
@@ -79,6 +81,7 @@ export function SgDsLibraryVideoListCard(rawProps: SgDsLibraryVideoListCardProps
     badgeVariant = 'solid',
     locked = false,
     lockIcon = '',
+    videoSrc = '',
     className = '',
     creatorBadge = '후원자 145k',
     creatorBadgeStatus = 'neutral',
@@ -143,6 +146,7 @@ export function SgDsLibraryVideoListCard(rawProps: SgDsLibraryVideoListCardProps
         badgeVariant={badgeVariant}
         locked={locked}
         lockIcon={lockIcon}
+        videoSrc={videoSrc}
         captionEyebrow=""
         captionTitle=""
         duration={duration}

@@ -31,6 +31,7 @@ import {
 } from '@/libraries/sg-ds-library/components'
 import { useVideoStore } from '@/stores/video'
 import { useMeStore } from '@/stores/me'
+import FeedVideo from '@/components/FeedVideo'
 import { apiFetch } from '@/lib/api'
 import type { SgDsLibraryCommentInputProps } from '@/libraries/sg-ds-library/components/CommentInput'
 
@@ -138,6 +139,10 @@ export default function VideoPage() {
   }
   function lockBadgeText(p: any): string {
     return isLockedPost(p) ? `${(p.content_price ?? 0).toLocaleString()} CRD` : ''
+  }
+  function videoSrcOf(p: any): string {
+    if (isLockedPost(p)) return ''
+    return (p?.media ?? []).find((m: any) => m.content_type?.startsWith('video/'))?.url ?? ''
   }
 
   function toggleLike() {
@@ -346,19 +351,7 @@ export default function VideoPage() {
                 {post && (
                   <div style={{ position: 'relative', width: '100%' }}>
                     {videoMedia ? (
-                      <video
-                        key={post.id}
-                        controls
-                        src={videoMedia.url}
-                        poster={thumbnailSrc}
-                        style={{
-                          width: '100%',
-                          aspectRatio: '16/9',
-                          borderRadius: 'var(--ds-radius-md)',
-                          background: '#000',
-                          display: 'block',
-                        }}
-                      />
+                      <FeedVideo key={post.id} src={videoMedia.url} poster={thumbnailSrc || undefined} />
                     ) : (
                       <SgDsLibraryPostListItem
                         mediaSrc={thumbnailSrc}
@@ -682,6 +675,8 @@ export default function VideoPage() {
                           mediaSize="sm"
                           showAvatar={false}
                           thumbnailImageUrl={postThumb(p)}
+                          videoSrc={videoSrcOf(p)}
+                          showPlay={!!videoSrcOf(p)}
                           locked={isLockedPost(p)}
                           lockIcon="lock"
                           badgeText={lockBadgeText(p)}
@@ -764,6 +759,8 @@ export default function VideoPage() {
                           key={p.id}
                           mediaSize="sm"
                           thumbnailImageUrl={postThumb(p)}
+                          videoSrc={videoSrcOf(p)}
+                          showPlay={!!videoSrcOf(p)}
                           locked={isLockedPost(p)}
                           lockIcon="lock"
                           badgeText={lockBadgeText(p)}

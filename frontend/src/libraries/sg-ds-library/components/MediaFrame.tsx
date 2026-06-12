@@ -36,6 +36,8 @@ export type SgDsLibraryMediaFrameProps = HTMLAttributes<HTMLDivElement> & {
   backgroundTokenCollection?: string;
   src?: string;
   imageUrl?: string;
+  /** 영상 URL을 주면 정지된 영상 프레임(특정 지점 25%)을 썸네일로 렌더한다. */
+  videoSrc?: string;
   locked?: boolean;
   /** Lock notice icon (icon picker). Use to signal the reason — e.g. crown for
    *  premium, user-round for subscriber-only, shield-alert for age restriction. */
@@ -112,6 +114,7 @@ export function SgDsLibraryMediaFrame(rawProps: SgDsLibraryMediaFrameProps) {
     showGrain = true,
     showPlay = true,
     src = '',
+    videoSrc = '',
     viewerCount = '',
     style,
     ...props
@@ -159,7 +162,25 @@ export function SgDsLibraryMediaFrame(rawProps: SgDsLibraryMediaFrameProps) {
     >
       <div className="media-frame-aspect" aria-hidden="true" />
       <div className="media-frame-bg" style={{ background: mediaFrameBackground }}>
-        {resolvedImageUrl ? <img src={resolvedImageUrl} alt="" /> : null}
+        {videoSrc ? (
+          <video
+            src={videoSrc}
+            muted
+            playsInline
+            preload="metadata"
+            tabIndex={-1}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }}
+            onLoadedMetadata={(e) => {
+              // 정지된 썸네일: 특정 지점(25%, 최대 5초) 프레임으로 seek
+              const v = e.currentTarget
+              if (isFinite(v.duration) && v.duration > 0.2) {
+                try { v.currentTime = Math.min(v.duration * 0.25, 5) } catch { /* noop */ }
+              }
+            }}
+          />
+        ) : resolvedImageUrl ? (
+          <img src={resolvedImageUrl} alt="" />
+        ) : null}
       </div>
       {showGrain ? <div className="media-frame-grain" /> : null}
       {hasCaption ? <div className="media-frame-caption-scrim" aria-hidden="true" /> : null}

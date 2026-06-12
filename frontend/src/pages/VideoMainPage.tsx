@@ -57,6 +57,11 @@ function isLockedPost(p: any): boolean {
 function lockBadgeText(p: any): string {
   return isLockedPost(p) ? `${(p.content_price ?? 0).toLocaleString()} CRD` : ''
 }
+// 잠금 아닌 영상 포스트의 재생 가능한 video URL (썸네일을 실제 프레임으로 쓰기 위함)
+function videoSrcOf(p: any): string {
+  if (isLockedPost(p)) return ''
+  return (p?.media ?? []).find((m: any) => m.content_type?.startsWith('video/'))?.url ?? ''
+}
 
 export default function VideoMainPage() {
   const navigate = useNavigate()
@@ -314,6 +319,8 @@ export default function VideoMainPage() {
                 </SgDsLibraryText>
                 <SgDsLibraryVideoListCard
                   thumbnailImageUrl={getPostThumbnail(p)}
+                  videoSrc={videoSrcOf(p)}
+                  showPlay={!!videoSrcOf(p)}
                   locked={isLockedPost(p)}
                   lockIcon="lock"
                   badgeText={lockBadgeText(p)}
@@ -419,6 +426,8 @@ export default function VideoMainPage() {
                 key={p.id}
                 mediaSize="sm"
                 thumbnailImageUrl={getPostThumbnail(p)}
+                videoSrc={videoSrcOf(p)}
+                showPlay={!!videoSrcOf(p)}
                 locked={isLockedPost(p)}
                 lockIcon="lock"
                 badgeText={lockBadgeText(p)}
