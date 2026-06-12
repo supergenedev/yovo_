@@ -103,6 +103,8 @@ Rails.application.routes.draw do
         get :posts, on: :collection
         get :confirm_username, on: :collection
         get :coin, on: :collection
+        post :charge, on: :collection
+        get :coin_histories, on: :collection
         post :apply_creator, on: :collection
       end
       resources :chat_rooms, only: %i[index show create] do

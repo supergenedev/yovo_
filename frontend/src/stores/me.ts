@@ -5,10 +5,13 @@ interface MeState {
   user: any | null
   following: any[]
   coin: number | null
+  histories: any[]
   loading: boolean
   fetchMe: () => Promise<void>
   fetchFollowing: () => Promise<void>
   fetchCoin: () => Promise<void>
+  charge: (amount: number) => Promise<any>
+  fetchHistories: () => Promise<void>
   updateMe: (params: { nickname?: string; username?: string; introduction?: string }) => Promise<any>
   uploadProfileImage: (file: File) => Promise<any>
   applyCreator: () => Promise<any>
@@ -18,6 +21,7 @@ export const useMeStore = create<MeState>((set) => ({
   user: null,
   following: [],
   coin: null,
+  histories: [],
   loading: false,
 
   async fetchMe() {
@@ -48,6 +52,18 @@ export const useMeStore = create<MeState>((set) => ({
     } catch (e) {
       console.error('fetchCoin error:', e)
     }
+  },
+
+  // 모의 즉시 결제 충전. 성공 시 잔액을 응답 값으로 갱신한다.
+  async charge(amount) {
+    const res = await apiFetch('/api/v/me/charge', { method: 'POST', body: { amount } })
+    set({ coin: res.user_coin?.coin ?? 0 })
+    return res
+  },
+
+  async fetchHistories() {
+    const res = await apiFetch('/api/v/me/coin_histories')
+    set({ histories: res.data ?? [] })
   },
 
   async updateMe(params) {

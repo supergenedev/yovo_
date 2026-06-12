@@ -30,6 +30,7 @@ import {
   SgDsLibraryPostListItem,
 } from '@/libraries/sg-ds-library/components'
 import { useVideoStore } from '@/stores/video'
+import { useMeStore } from '@/stores/me'
 import { apiFetch } from '@/lib/api'
 import type { SgDsLibraryCommentInputProps } from '@/libraries/sg-ds-library/components/CommentInput'
 
@@ -71,6 +72,7 @@ export default function VideoPage() {
   const [trending, setTrending] = useState<any[]>([])
   const [recommended, setRecommended] = useState<any[]>([])
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
+  const [purchaseSuccess, setPurchaseSuccess] = useState(false)
 
   // comment reply state
   const [replyTo, setReplyTo] = useState<{ id: number; username: string } | null>(null)
@@ -93,6 +95,8 @@ export default function VideoPage() {
 
   useEffect(() => {
     if (!id) return
+    setPurchaseSuccess(false)
+    setPurchaseError(null)
     fetchPost(id)
     apiFetch(`/api/v/posts/${id}/post_comments`)
       .then((res: any) => setComments(res.post_comments ?? res.data ?? []))
@@ -147,6 +151,9 @@ export default function VideoPage() {
       const res: any = await apiFetch(`/api/v/posts/${id}/purchase`, { method: 'POST' })
       // update store with fresh post data that includes unlocked media
       useVideoStore.setState({ currentPost: res.post })
+      // 코인 차감을 잔액에 반영 + 성공 안내
+      useMeStore.getState().fetchCoin()
+      setPurchaseSuccess(true)
     } catch (e: any) {
       const msg = e?.data?.message ?? e?.message ?? '구매에 실패했습니다'
       setPurchaseError(msg)
@@ -312,6 +319,18 @@ export default function VideoPage() {
                         구매하기
                       </SgDsLibraryButton>
                     }
+                  />
+                )}
+
+                {/* Purchase success alert */}
+                {purchaseSuccess && (
+                  <SgDsLibraryAlert
+                    style={{ width: '100%' }}
+                    status="success"
+                    variant="flat"
+                    icon="check"
+                    title="구매 완료!"
+                    message="콘텐츠가 해금되었어요"
                   />
                 )}
 

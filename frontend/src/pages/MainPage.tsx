@@ -81,6 +81,15 @@ export default function MainPage() {
   const [tipLoading, setTipLoading] = useState(false)
   const [tipSuccess, setTipSuccess] = useState(false)
 
+  // 크레딧 충전/이력 다이얼로그 상태
+  const [chargeOpen, setChargeOpen] = useState(false)
+  const [chargeAmount, setChargeAmount] = useState(1000)
+  const [chargeLoading, setChargeLoading] = useState(false)
+  const [chargeError, setChargeError] = useState<string | null>(null)
+  const [chargeSuccess, setChargeSuccess] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(false)
+
   const feedStore = useFeedStore()
   const interactionsStore = useInteractionsStore()
   const meStore = useMeStore()
@@ -98,6 +107,7 @@ export default function MainPage() {
     feedStore.fetchTrending()
     creatorStore.fetchRecommended()
     if (meStore.following.length === 0) meStore.fetchFollowing()
+    meStore.fetchCoin()
   }, [])
 
   useEffect(() => {
@@ -167,6 +177,52 @@ export default function MainPage() {
     } finally {
       setTipLoading(false)
     }
+  }
+
+  function closeChargeDialog() {
+    setChargeOpen(false)
+    setChargeAmount(1000)
+    setChargeError(null)
+    setChargeSuccess(false)
+  }
+
+  async function handleCharge() {
+    if (chargeLoading || chargeSuccess) return
+    setChargeLoading(true)
+    setChargeError(null)
+    try {
+      await meStore.charge(chargeAmount)
+      setChargeSuccess(true)
+    } catch (e: any) {
+      setChargeError(e?.data?.message ?? '충전에 실패했습니다. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setChargeLoading(false)
+    }
+  }
+
+  async function openHistoryDialog() {
+    setHistoryOpen(true)
+    setHistoryLoading(true)
+    try {
+      await meStore.fetchHistories()
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
+  function historyTypeLabel(type?: string): string {
+    if (type === 'charge') return '충전'
+    if (type === 'purchase') return '구매'
+    if (type === 'tip') return '후원'
+    if (type === 'admin_grant') return '관리자 지급'
+    return type ?? '기타'
+  }
+
+  function formatHistoryDate(ms?: number | null): string {
+    if (!ms) return ''
+    return new Date(ms).toLocaleString('ko-KR', {
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+    })
   }
 
   function likedCountAdjustment(post: any): number {
@@ -255,6 +311,100 @@ export default function MainPage() {
               <SgDsLibraryButton variant="primary" size="md" onClick={handleTipSubmit} disabled={tipLoading || tipSuccess}>
                 {tipSuccess ? '완료!' : tipLoading ? '처리 중…' : '후원'}
               </SgDsLibraryButton>
+            </SgDsLibraryStack>
+          </SgDsLibraryStack>
+        </SgDsLibraryDialog>
+      )}
+
+      {/* ── Charge Dialog (충전하기) ── */}
+      {chargeOpen && (
+        <SgDsLibraryDialog
+          open={true}
+          title="크레딧 충전하기"
+          description="테스트 결제입니다 — 결제 즉시 충전됩니다. (실제 과금 없음)"
+          onDismiss={closeChargeDialog}
+          size="sm"
+        >
+          <SgDsLibraryStack direction="column" gap="md" padding="sm">
+            {chargeError && <SgDsLibraryAlert status="danger" message={chargeError} />}
+            {chargeSuccess ? (
+              <>
+                <SgDsLibraryAlert
+                  status="success"
+                  message={`충전 완료! 현재 잔액 ${meStore.coin != null ? meStore.coin.toLocaleString() : '—'} CRD`}
+                />
+                <SgDsLibraryStack direction="row" justify="end" gap="sm" paddingTop="sm">
+                  <SgDsLibraryButton variant="primary" size="md" onClick={closeChargeDialog}>닫기</SgDsLibraryButton>
+                </SgDsLibraryStack>
+              </>
+            ) : (
+              <>
+                <SgDsLibraryText tone="secondary" variant="body-sm">충전 금액 (CRD)</SgDsLibraryText>
+                <SgDsLibraryStack direction="row" gap="sm" wrap={true}>
+                  {[1000, 5000, 10000, 30000].map((amount) => (
+                    <SgDsLibraryButton
+                      key={amount}
+                      variant={chargeAmount === amount ? 'primary' : 'soft'}
+                      size="sm"
+                      shape="pill"
+                      onClick={() => setChargeAmount(amount)}
+                      disabled={chargeLoading}
+                    >
+                      {amount.toLocaleString()} CRD
+                    </SgDsLibraryButton>
+                  ))}
+                </SgDsLibraryStack>
+                <SgDsLibraryStack direction="row" justify="end" gap="sm" paddingTop="sm">
+                  <SgDsLibraryButton variant="ghost" size="md" onClick={closeChargeDialog} disabled={chargeLoading}>취소</SgDsLibraryButton>
+                  <SgDsLibraryButton variant="primary" size="md" onClick={handleCharge} disabled={chargeLoading}>
+                    {chargeLoading ? '처리 중…' : `${chargeAmount.toLocaleString()} CRD 결제하고 충전`}
+                  </SgDsLibraryButton>
+                </SgDsLibraryStack>
+              </>
+            )}
+          </SgDsLibraryStack>
+        </SgDsLibraryDialog>
+      )}
+
+      {/* ── Coin History Dialog (이력) ── */}
+      {historyOpen && (
+        <SgDsLibraryDialog
+          open={true}
+          title="크레딧 이력"
+          description="충전·구매·후원 내역입니다."
+          onDismiss={() => setHistoryOpen(false)}
+          size="sm"
+        >
+          <SgDsLibraryStack direction="column" gap="sm" padding="sm" style={{ maxHeight: '420px', overflowY: 'auto' }}>
+            {historyLoading ? (
+              <SgDsLibraryText tone="tertiary" variant="body-sm">불러오는 중…</SgDsLibraryText>
+            ) : meStore.histories.length === 0 ? (
+              <SgDsLibraryText tone="tertiary" variant="body-sm">이력이 없어요</SgDsLibraryText>
+            ) : (
+              meStore.histories.map((h: any) => (
+                <SgDsLibraryStack key={h.id} direction="row" align="center" justify="between" gap="sm" paddingBottom="xs" style={{ borderBottom: '1px solid var(--ds-color-border-default, rgba(0,0,0,0.08))' }}>
+                  <SgDsLibraryStack direction="column" gap="none">
+                    <SgDsLibraryText variant="ui-sm" weight="semibold">{historyTypeLabel(h.history_type)}</SgDsLibraryText>
+                    <SgDsLibraryText tone="tertiary" variant="caption">
+                      {[h.target_label, h.creator_nickname].filter(Boolean).join(' · ')}
+                    </SgDsLibraryText>
+                    <SgDsLibraryText tone="tertiary" variant="caption">{formatHistoryDate(h.created_at)}</SgDsLibraryText>
+                  </SgDsLibraryStack>
+                  <SgDsLibraryStack direction="column" gap="none" align="end">
+                    <SgDsLibraryText
+                      variant="ui-sm"
+                      weight="semibold"
+                      style={{ color: (h.amount ?? 0) >= 0 ? '#16a34a' : '#dc2626' }}
+                    >
+                      {(h.amount ?? 0) >= 0 ? '+' : ''}{(h.amount ?? 0).toLocaleString()} CRD
+                    </SgDsLibraryText>
+                    <SgDsLibraryText tone="tertiary" variant="caption">잔액 {(h.current_coin ?? 0).toLocaleString()} CRD</SgDsLibraryText>
+                  </SgDsLibraryStack>
+                </SgDsLibraryStack>
+              ))
+            )}
+            <SgDsLibraryStack direction="row" justify="end" paddingTop="sm">
+              <SgDsLibraryButton variant="ghost" size="md" onClick={() => setHistoryOpen(false)}>닫기</SgDsLibraryButton>
             </SgDsLibraryStack>
           </SgDsLibraryStack>
         </SgDsLibraryDialog>
@@ -683,7 +833,18 @@ export default function MainPage() {
             postsValue={me?.posts_count != null ? String(me.posts_count) : '—'}
           />
           <SgDsLibraryUserCardSection style={{ height: 'fit-content' }} tint="sunken">
-            <SgDsLibraryCreditBalanceCard showRows={true} showActions={true} action2Label="이력" action1Label="충전하기">
+            {/* 기본 action 버튼은 onClick을 받지 않으므로 actionsSlot으로 직접 렌더링 */}
+            <SgDsLibraryCreditBalanceCard
+              showRows={true}
+              showActions={true}
+              balance={meStore.coin != null ? meStore.coin.toLocaleString() : '—'}
+              actionsSlot={
+                <>
+                  <SgDsLibraryButton size="sm" variant="primary" onClick={() => setChargeOpen(true)}>충전하기</SgDsLibraryButton>
+                  <SgDsLibraryButton size="sm" variant="secondary" onClick={openHistoryDialog}>이력</SgDsLibraryButton>
+                </>
+              }
+            >
               <SgDsLibraryCreditBalanceCardRow style={{ height: '21px' }} label="후원자" value="—" delta="" />
               <SgDsLibraryCreditBalanceCardRow style={{ height: '21px' }} label="오늘 받은 후원" value="—" delta="" />
             </SgDsLibraryCreditBalanceCard>
