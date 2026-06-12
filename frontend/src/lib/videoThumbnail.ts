@@ -1,4 +1,4 @@
-// 동영상 파일에서 중간 구간(20~80%)의 "내용 있는" 프레임 한 장을 추출해
+// 동영상 파일에서 특정 지점(기본 25% 지점)의 "내용 있는" 프레임 한 장을 추출해
 // JPEG 썸네일(Blob + 미리보기 objectURL)로 돌려준다. 전부 브라우저 안에서 처리.
 //
 // 검은 썸네일 방지:
@@ -60,10 +60,9 @@ export function extractVideoFrame(
     let best: { canvas: HTMLCanvasElement; luma: number } | null = null
 
     function pickTime(): number {
-      // 1차: 중앙 랜덤, 이후: 구간을 고르게 분포
-      if (attempt === 0) return duration * (0.2 + rand() * 0.6)
-      const frac = [0.5, 0.35, 0.65, 0.25, 0.75][attempt] ?? rand()
-      return duration * frac
+      // 1차: 특정 지점(영상의 25% 지점) — 결정적. 검은 프레임이면 아래 지점들로 재시도.
+      const fracs = [0.25, 0.5, 0.1, 0.65, 0.4]
+      return duration * (fracs[attempt] ?? 0.25)
     }
 
     function finish(c: HTMLCanvasElement) {

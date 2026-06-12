@@ -32,6 +32,7 @@ import {
   SgDsLibraryToast,
   SgDsLibraryToastRegion,
 } from '@/libraries/sg-ds-library/components'
+import FeedVideo from '@/components/FeedVideo'
 import { useFeedStore } from '@/stores/feed'
 import { useInteractionsStore } from '@/stores/interactions'
 import { useMeStore } from '@/stores/me'
@@ -249,17 +250,7 @@ export default function MainPage() {
       ? post.media.find((m: any) => m.content_type?.startsWith('video/'))
       : undefined
     const inlineVideo = kind === 'video' && !locked && videoMedia?.url
-      ? (
-        <video
-          src={videoMedia.url}
-          poster={imageUrl}
-          controls
-          playsInline
-          preload="metadata"
-          onClick={(e) => e.stopPropagation()}
-          style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', background: '#000', borderRadius: 'var(--ds-radius-md, 12px)', display: 'block' }}
-        />
-      )
+      ? <FeedVideo src={videoMedia.url} poster={imageUrl} />
       : undefined
 
     // 인라인 영상이 있으면 그걸 본문으로, 없으면 (텍스트/이미지) 기존 썸네일 로직
