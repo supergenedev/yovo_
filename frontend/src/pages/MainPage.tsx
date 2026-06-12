@@ -256,6 +256,10 @@ export default function MainPage() {
       prose: post.body_ko ?? post.body_ja,
       imageUrl: imageUrlProp,
       kind,
+      // 유료(잠금) 포스트면 가격 배지 표시
+      lockPrice: post.view_type === 'buyer_only' && !post.interaction_with_me?.purchased
+        ? (post.content_price ?? 0)
+        : null,
       cardVariant: 'outline' as const,
       cardPadding: 'md' as const,
       userMeta: timeAgo(post.created_at),

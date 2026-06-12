@@ -30,6 +30,9 @@ export type SgDsLibraryVideoListCardProps = Omit<HTMLAttributes<HTMLElement>, 't
   badgeStatus?: SgDsLibraryBadgeStatus;
   badgeText?: string;
   badgeVariant?: SgDsLibraryBadgeVariant;
+  /** 잠금(유료) 콘텐츠면 썸네일에 잠금 오버레이를 표시한다. */
+  locked?: boolean;
+  lockIcon?: string;
   creatorBadge?: ReactNode;
   creatorBadgeStatus?: SgDsLibraryBadgeStatus;
   creatorBadgeVariant?: SgDsLibraryBadgeVariant;
@@ -74,6 +77,8 @@ export function SgDsLibraryVideoListCard(rawProps: SgDsLibraryVideoListCardProps
     badgeStatus = 'warning',
     badgeText = '15+',
     badgeVariant = 'solid',
+    locked = false,
+    lockIcon = '',
     className = '',
     creatorBadge = '후원자 145k',
     creatorBadgeStatus = 'neutral',
@@ -136,6 +141,8 @@ export function SgDsLibraryVideoListCard(rawProps: SgDsLibraryVideoListCardProps
         badgeStatus={badgeStatus}
         badgeText={badgeText}
         badgeVariant={badgeVariant}
+        locked={locked}
+        lockIcon={lockIcon}
         captionEyebrow=""
         captionTitle=""
         duration={duration}

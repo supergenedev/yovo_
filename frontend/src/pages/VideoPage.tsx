@@ -132,6 +132,14 @@ export default function VideoPage() {
     return (p?.media ?? []).find((m: any) => m.content_type?.startsWith('image/'))?.url ?? p?.thumbnail_url ?? ''
   }
 
+  // 유료(잠금) 포스트: buyer_only이고 구매 전
+  function isLockedPost(p: any): boolean {
+    return p?.view_type === 'buyer_only' && !p?.interaction_with_me?.purchased
+  }
+  function lockBadgeText(p: any): string {
+    return isLockedPost(p) ? `${(p.content_price ?? 0).toLocaleString()} CRD` : ''
+  }
+
   function toggleLike() {
     if (!id) return
     if (liked) unlikePost(id)
@@ -674,6 +682,11 @@ export default function VideoPage() {
                           mediaSize="sm"
                           showAvatar={false}
                           thumbnailImageUrl={postThumb(p)}
+                          locked={isLockedPost(p)}
+                          lockIcon="lock"
+                          badgeText={lockBadgeText(p)}
+                          badgeStatus="warning"
+                          badgeVariant="solid"
                           title={p.title_ko ?? p.title ?? ''}
                           creatorName={p.creator_user?.nickname ?? ''}
                           meta={`좋아요 ${p.likes_count ?? 0} · ${timeAgo(p.created_at)}`}
@@ -751,6 +764,11 @@ export default function VideoPage() {
                           key={p.id}
                           mediaSize="sm"
                           thumbnailImageUrl={postThumb(p)}
+                          locked={isLockedPost(p)}
+                          lockIcon="lock"
+                          badgeText={lockBadgeText(p)}
+                          badgeStatus="warning"
+                          badgeVariant="solid"
                           title={p.title_ko ?? ''}
                           creatorName={p.creator_user?.nickname ?? ''}
                           meta={`좋아요 ${p.likes_count ?? 0} · ${timeAgo(p.created_at)}`}

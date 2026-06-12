@@ -50,6 +50,14 @@ function getPostThumbnail(p: any): string {
   return imageMedia?.url ?? p.thumbnail_url ?? ''
 }
 
+// 유료(잠금) 포스트: buyer_only이고 아직 구매 전
+function isLockedPost(p: any): boolean {
+  return p?.view_type === 'buyer_only' && !p?.interaction_with_me?.purchased
+}
+function lockBadgeText(p: any): string {
+  return isLockedPost(p) ? `${(p.content_price ?? 0).toLocaleString()} CRD` : ''
+}
+
 export default function VideoMainPage() {
   const navigate = useNavigate()
   const { posts, loading, fetchVideoPosts, loadMore, hasMore } = useVideoStore()
@@ -306,6 +314,11 @@ export default function VideoMainPage() {
                 </SgDsLibraryText>
                 <SgDsLibraryVideoListCard
                   thumbnailImageUrl={getPostThumbnail(p)}
+                  locked={isLockedPost(p)}
+                  lockIcon="lock"
+                  badgeText={lockBadgeText(p)}
+                  badgeStatus="warning"
+                  badgeVariant="solid"
                   title={p.title_ko ?? p.title ?? ''}
                   creatorName={p.creator_user?.nickname ?? ''}
                   meta={`좋아요 ${p.likes_count ?? 0} · ${timeAgo(p.created_at)}`}
@@ -406,6 +419,11 @@ export default function VideoMainPage() {
                 key={p.id}
                 mediaSize="sm"
                 thumbnailImageUrl={getPostThumbnail(p)}
+                locked={isLockedPost(p)}
+                lockIcon="lock"
+                badgeText={lockBadgeText(p)}
+                badgeStatus="warning"
+                badgeVariant="solid"
                 title={p.title_ko ?? p.title ?? ''}
                 creatorName={p.creator_user?.nickname ?? ''}
                 meta={`좋아요 ${p.likes_count ?? 0} · ${timeAgo(p.created_at)}`}

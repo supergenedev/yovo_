@@ -2,6 +2,7 @@ import type { HTMLAttributes, ReactNode } from 'react';
 import { SgDsLibraryAudioBlock } from './AudioBlock';
 import { SgDsLibraryAudioFrame } from './AudioFrame';
 import { SgDsLibraryAudioPlayer } from './AudioPlayer';
+import { SgDsLibraryBadge } from './Badge';
 import { SgDsLibraryButton } from './Button';
 import { SgDsLibraryChip } from './Chip';
 import { SgDsLibraryCollabCredits } from './CollabCredits';
@@ -58,6 +59,8 @@ export type SgDsLibraryPostCardProps = Omit<HTMLAttributes<HTMLElement>, 'childr
   audioArtImageUrl?: string;
   stats?: SgDsLibraryPostCardStat[];
   kind?: string;
+  /** 유료(잠금) 포스트면 가격 배지를 표시한다. null/0이면 미표시. */
+  lockPrice?: number | null;
   bodyVariant?: SgDsLibraryPostCardBodyVariant;
   cardVariant?: SgDsLibraryPostCardCardVariant;
   cardPadding?: SgDsLibraryPostCardCardPadding;
@@ -99,6 +102,7 @@ export function SgDsLibraryPostCard(rawProps: SgDsLibraryPostCardProps) {
   imageTileCount = '4',
   imageUrl,
   kind,
+  lockPrice,
   prose,
   proseVariant = 'default',
   stats,
@@ -162,6 +166,14 @@ export function SgDsLibraryPostCard(rawProps: SgDsLibraryPostCardProps) {
           tailSlot={<SgDsLibraryButton aria-label="More" iconOnly leadingIcon="more-horizontal" size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onMoreClick?.() }} />}
         />
       </header>
+
+      {lockPrice ? (
+        <div className="post-card-lock-badge" style={{ display: 'flex' }}>
+          <SgDsLibraryBadge status="warning" variant="solid" size="sm" shape="pill" icon="lock">
+            {lockPrice.toLocaleString()} CRD
+          </SgDsLibraryBadge>
+        </div>
+      ) : null}
 
       {hasText ? (
         <div
