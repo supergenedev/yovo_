@@ -2,6 +2,7 @@ import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
 import { SgDsLibraryBadge, type SgDsLibraryBadgeStatus, type SgDsLibraryBadgeVariant } from './Badge';
 import { SgDsLibraryButton, type SgDsLibraryButtonShape, type SgDsLibraryButtonSize, type SgDsLibraryButtonVariant } from './Button';
 import { SgDsLibraryIcon } from './Icon';
+import { SgDsLibraryLazyVideoThumb } from './LazyVideoThumb';
 import { SgDsLibraryLiveStreamBadge, SgDsLibraryLiveStreamViewerCount } from './LiveStream';
 import { resolveWorkbenchModeProps } from './_shared';
 
@@ -163,21 +164,7 @@ export function SgDsLibraryMediaFrame(rawProps: SgDsLibraryMediaFrameProps) {
       <div className="media-frame-aspect" aria-hidden="true" />
       <div className="media-frame-bg" style={{ background: mediaFrameBackground }}>
         {videoSrc ? (
-          <video
-            src={videoSrc}
-            muted
-            playsInline
-            preload="metadata"
-            tabIndex={-1}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }}
-            onLoadedMetadata={(e) => {
-              // 정지된 썸네일: 특정 지점(25%, 최대 5초) 프레임으로 seek
-              const v = e.currentTarget
-              if (isFinite(v.duration) && v.duration > 0.2) {
-                try { v.currentTime = Math.min(v.duration * 0.25, 5) } catch { /* noop */ }
-              }
-            }}
-          />
+          <SgDsLibraryLazyVideoThumb src={videoSrc} />
         ) : resolvedImageUrl ? (
           <img src={resolvedImageUrl} alt="" />
         ) : null}
