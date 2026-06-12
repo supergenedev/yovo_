@@ -242,11 +242,32 @@ export default function MainPage() {
       if (imgMedia) imageUrl = imgMedia.url
     }
     const kind = contentKind(post.content_type)
-    // video kind doesn't pass imageUrl per spec
+    const locked = post.view_type === 'buyer_only' && !post.interaction_with_me?.purchased
+
+    // 영상 포스트(공개/해금)는 피드에서 바로 재생 가능한 인라인 플레이어를 띄운다.
+    const videoMedia = Array.isArray(post.media)
+      ? post.media.find((m: any) => m.content_type?.startsWith('video/'))
+      : undefined
+    const inlineVideo = kind === 'video' && !locked && videoMedia?.url
+      ? (
+        <video
+          src={videoMedia.url}
+          poster={imageUrl}
+          controls
+          playsInline
+          preload="metadata"
+          onClick={(e) => e.stopPropagation()}
+          style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', background: '#000', borderRadius: 'var(--ds-radius-md, 12px)', display: 'block' }}
+        />
+      )
+      : undefined
+
+    // 인라인 영상이 있으면 그걸 본문으로, 없으면 (텍스트/이미지) 기존 썸네일 로직
     const imageUrlProp = kind === 'video' ? undefined : imageUrl
 
     const adj = likedCountAdjustment(post)
     return {
+      bodySlot: inlineVideo,
       userName: creator?.nickname ?? '알 수 없음',
       userInitials: getInitials(creator?.nickname),
       userAvatarSrc: creator?.profile_image ?? undefined,
@@ -257,9 +278,7 @@ export default function MainPage() {
       imageUrl: imageUrlProp,
       kind,
       // 유료(잠금) 포스트면 가격 배지 표시
-      lockPrice: post.view_type === 'buyer_only' && !post.interaction_with_me?.purchased
-        ? (post.content_price ?? 0)
-        : null,
+      lockPrice: locked ? (post.content_price ?? 0) : null,
       cardVariant: 'outline' as const,
       cardPadding: 'md' as const,
       userMeta: timeAgo(post.created_at),
