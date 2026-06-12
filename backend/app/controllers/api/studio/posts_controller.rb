@@ -1,7 +1,7 @@
 module Api
   module Studio
     class PostsController < ApplicationController
-      before_action :set_post, only: [:show, :update, :destroy]
+      before_action :set_post, only: [:show, :update, :destroy, :thumbnail]
 
       def index
         posts = current_creator_user.posts.ordered
@@ -25,6 +25,13 @@ module Api
       def destroy
         @post.destroy!
         default_success_render
+      end
+
+      # 기존 미디어(영상)를 교체하지 않고 썸네일 이미지를 추가로 첨부한다.
+      # (update의 media= 는 컬렉션을 통째로 교체하므로 백필에는 attach를 쓴다)
+      def thumbnail
+        @post.media.attach(params[:thumbnail])
+        render json: @post, serializer: PostSerializer, scope: current_user
       end
 
       private

@@ -31,6 +31,33 @@ module Api
         assert_equal 1, created.media.count, "업로드한 미디어가 첨부돼야 한다"
       end
 
+      test "thumbnail attaches image without removing existing video media" do
+        headers = auth_headers_for(@active)
+        post = creator_users(:alice_creator).posts.create!(title_ko: "영상", content_type: :video, view_type: :everyone, status: :published)
+        post.media.attach(io: StringIO.new("vid"), filename: "v.mp4", content_type: "video/mp4")
+        assert_equal 1, post.media.count
+
+        thumb = Rack::Test::UploadedFile.new(StringIO.new("img"), "image/jpeg", original_filename: "t.jpg")
+        post "/api/studio/posts/#{post.id}/thumbnail", params: { thumbnail: thumb }, headers: headers
+
+        assert_response :success
+        post.reload
+        assert_equal 2, post.media.count, "기존 영상은 유지되고 썸네일이 추가돼야 한다"
+        types = post.media.map { |m| m.content_type }
+        assert_includes types, "video/mp4"
+        assert_includes types, "image/jpeg"
+      end
+
+      test "cannot attach thumbnail to another creator's post" do
+        headers = auth_headers_for(@active)
+        # bob_creator(pending)이지만 소유권 검증만 보기 위해 alice가 타인 글에 접근 시도
+        others = creator_users(:bob_creator).posts.create!(title_ko: "남의글", content_type: :video, view_type: :everyone, status: :published)
+        thumb = Rack::Test::UploadedFile.new(StringIO.new("img"), "image/jpeg", original_filename: "t.jpg")
+        post "/api/studio/posts/#{others.id}/thumbnail", params: { thumbnail: thumb }, headers: headers
+        assert_response :not_found
+        assert_equal 0, others.reload.media.count
+      end
+
       test "pending creator cannot post (admin approval required)" do
         headers = auth_headers_for(@pending)
         assert_no_difference -> { Post.count } do

@@ -55,6 +55,7 @@ Rails.application.routes.draw do
         get :confirm_username, on: :collection
       end
       resources :posts do
+        member { post :thumbnail }
         resources :post_comments, only: %i[index create]
       end
       resources :chat_rooms, only: %i[index show] do
