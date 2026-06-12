@@ -69,6 +69,7 @@ export default function VideoPage() {
   const [similarPosts, setSimilarPosts] = useState<any[]>([])
   const [comments, setComments] = useState<any[]>([])
   const [trending, setTrending] = useState<any[]>([])
+  const [recommended, setRecommended] = useState<any[]>([])
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
 
   // comment reply state
@@ -101,11 +102,14 @@ export default function VideoPage() {
       .catch(() => setSimilarPosts([]))
   }, [id])
 
-  // 트렌딩: 실제 포스트 (좋아요+댓글) 순위. 영상이 바뀌어도 한 번만 로드한다.
+  // 트렌딩/팔로우 추천: 실데이터. 영상이 바뀌어도 한 번만 로드한다.
   useEffect(() => {
     apiFetch('/api/v/feeds/trending', { query: { limit: 5 } })
       .then((res: any) => setTrending(res.posts ?? []))
       .catch(() => setTrending([]))
+    apiFetch('/api/v/creator_users/recommend')
+      .then((res: any) => setRecommended(res.creator_users ?? []))
+      .catch(() => setRecommended([]))
   }, [])
 
   const prevCreatorId = useRef<any>(null)
@@ -827,12 +831,32 @@ export default function VideoPage() {
               <SgDsLibraryStack as="section" direction="column" gap="var(--ds-spacing-space-2)" aria-label="Suggested creators">
                 <SgDsLibraryStack direction="row" align="center" justify="between" marginBottom="12px" height="21px">
                   <SgDsLibraryText as="h3" variant="ui" weight="semibold">팔로우 추천</SgDsLibraryText>
-                  <SgDsLibraryLink variant="subtle" size="sm" href="#">새로고침</SgDsLibraryLink>
+                  <SgDsLibraryLink variant="subtle" size="sm" href="#" onClick={(e: React.MouseEvent) => {
+                    e.preventDefault()
+                    apiFetch('/api/v/creator_users/recommend').then((res: any) => setRecommended(res.creator_users ?? [])).catch(() => {})
+                  }}>새로고침</SgDsLibraryLink>
                 </SgDsLibraryStack>
                 <SgDsLibraryStack direction="column" gap="md">
-                  <SgDsLibraryUserBlock avatarSize="sm" avatarSrc="https://i.pinimg.com/1200x/b9/45/02/b94502342dfd29c213a99bb1d93c151d.jpg" name="SOYU" meta="보컬 · 24.1K" initials="SY" avatarTone="pink" verified={true} size="sm" />
-                  <SgDsLibraryUserBlock avatarSize="sm" avatarSrc="https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg" name="Mika 三輪" meta="첼리스트 · 8.6K" initials="MK" avatarTone="green" size="sm" />
-                  <SgDsLibraryUserBlock avatarSize="sm" avatarSrc="https://i.pinimg.com/1200x/e8/df/8e/e8df8ee3fd256e1fa1b1714a59d03517.jpg" name="Nexus Choir" meta="합창 · 3.2K" initials="NX" avatarTone="blue" size="sm" />
+                  {recommended.length > 0
+                    ? recommended.slice(0, 5).map((c: any) => (
+                      <SgDsLibraryUserBlock
+                        key={c.id}
+                        avatarSize="sm"
+                        avatarSrc={c.profile_image ?? undefined}
+                        name={c.nickname ?? ''}
+                        meta={c.introduction || `팔로워 ${c.followers_count ?? 0}`}
+                        initials={(c.nickname ?? 'C').slice(0, 2)}
+                        avatarTone="brand"
+                        verified={c.creator_type === 'official'}
+                        size="sm"
+                        onClick={() => navigate('/creator/' + c.id)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    ))
+                    : (
+                      <SgDsLibraryText as="p" variant="caption" tone="tertiary">추천할 크리에이터가 없어요.</SgDsLibraryText>
+                    )
+                  }
                 </SgDsLibraryStack>
               </SgDsLibraryStack>
             </SgDsLibraryStack>

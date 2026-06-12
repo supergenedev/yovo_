@@ -732,21 +732,17 @@ export default function MainPage() {
                   avatarSize="sm"
                   avatarSrc={creator.profile_image ?? undefined}
                   name={creator.nickname ?? ''}
-                  meta={creator.bio ?? ''}
+                  meta={creator.introduction || `팔로워 ${creator.followers_count ?? 0}`}
                   initials={getInitials(creator.nickname)}
                   avatarTone="brand"
+                  verified={creator.creator_type === 'official'}
                   size="sm"
                   onClick={() => navigate('/creator/' + creator.id)}
                   style={{ cursor: 'pointer' }}
                 />
               ))
               : (
-                <>
-                  <SgDsLibraryUserBlock avatarSize="sm" avatarSrc="https://i.pinimg.com/1200x/b9/45/02/b94502342dfd29c213a99bb1d93c151d.jpg" name="SOYU" meta="보컬 · 24.1K · Hailey와 자주 작업" initials="SY" avatarTone="pink" verified={true} size="sm" />
-                  <SgDsLibraryUserBlock avatarSize="sm" avatarSrc="https://i.pinimg.com/1200x/ca/70/2c/ca702cddd216a2990f402aa303f4a03e.jpg" name="Mika 三輪" meta="첼리스트 · 8.6K · 콜라보 가능" initials="MK" avatarTone="green" size="sm" />
-                  <SgDsLibraryUserBlock avatarSize="sm" avatarSrc="https://i.pinimg.com/1200x/e8/df/8e/e8df8ee3fd256e1fa1b1714a59d03517.jpg" name="Nexus Choir" meta="합창 · AI 보컬 합성 · 3.2K" initials="NX" avatarTone="blue" size="sm" />
-                  <SgDsLibraryUserBlock avatarSize="sm" avatarSrc="https://i.pinimg.com/736x/ac/30/ad/ac30ad5b4d550027ff5be9fe95e3f196.jpg" name="유진 / Yujin" meta="사운드 디자이너 · 1.4K" initials="YJ" avatarTone="green" size="sm" />
-                </>
+                <SgDsLibraryText as="p" variant="caption" tone="tertiary">추천할 크리에이터가 없어요.</SgDsLibraryText>
               )
             }
           </SgDsLibraryStack>
