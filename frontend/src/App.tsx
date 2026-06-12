@@ -11,6 +11,7 @@ import CreatorProfilePage from '@/pages/CreatorProfilePage'
 import LibraryPage from '@/pages/LibraryPage'
 import NotificationPage from '@/pages/NotificationPage'
 import CreatePage from '@/pages/CreatePage'
+import PostComposerPage from '@/pages/PostComposerPage'
 import DmPage from '@/pages/DmPage'
 import MePage from '@/pages/MePage'
 import TwoColumnGuide from '@/pages/guide/TwoColumnGuide'
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/notification" element={<NotificationPage />} />
             <Route path="/create" element={<CreatePage />} />
+            <Route path="/studio/new" element={<PostComposerPage />} />
             <Route path="/dm" element={<DmPage />} />
             <Route path="/me" element={<MePage />} />
           </Route>

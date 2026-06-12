@@ -68,6 +68,15 @@ export default function AppLayout() {
             active={pathname === '/create'}
             onClick={() => navigate('/create')}
           />
+          {/* 활성 크리에이터만 실제 포스트 업로드 버튼을 본다 */}
+          {me.user?.creator_user?.status === 'active' && (
+            <SgDsLibrarySidebarItem
+              icon="square-pen"
+              label="새 포스트"
+              active={pathname === '/studio/new'}
+              onClick={() => navigate('/studio/new')}
+            />
+          )}
         </SgDsLibrarySidebarGroup>
 
         <SgDsLibrarySidebarGroup>

@@ -20,6 +20,16 @@ module Api
         render_with_pagy(collection: posts, serializer: PostSerializer, page: params[:page], limit: params[:items])
       end
 
+      # 트렌딩: 실제 포스트가 받은 (좋아요 + 댓글) 합산 순. 동률이면 먼저 올라온 순.
+      def trending
+        limit = (params[:limit].presence || 5).to_i.clamp(1, 50)
+        posts = Post.published
+                    .includes(:creator_user, media_attachments: :blob)
+                    .order(Arel.sql("(posts.likes_count + posts.comments_count) DESC, posts.created_at ASC"))
+                    .limit(limit)
+        render json: posts, each_serializer: PostSerializer, scope: current_user, status: :ok
+      end
+
       def creators
         following_ids = current_user.following_creator_users.select(:id)
         excluded_ids = (following_ids.map(&:id) + [ current_user.creator_user&.id ]).compact.uniq

@@ -14,7 +14,7 @@ module Api
 
       def create
         post = current_creator_user.posts.create!(post_params)
-        render json: post, serializer: PostSerializer, status: :created
+        render json: post, serializer: PostSerializer, scope: current_user, status: :created
       end
 
       def update
@@ -36,7 +36,8 @@ module Api
       def post_params
         params.permit(:title_ko, :title_ja, :body_ko, :body_ja,
                       :view_type, :status, :content_type, :content_price,
-                      :locked_thumbnail_url, :tip_amount, :scheduled_at)
+                      :locked_thumbnail_url, :tip_amount, :scheduled_at,
+                      media: [])
       end
     end
   end

@@ -6,9 +6,11 @@ interface FeedState {
   meta: PageMeta | null
   loading: boolean
   error: unknown
+  trending: any[]
   hasMore: () => boolean
   fetchFeed: (page?: number) => Promise<void>
   fetchDiscover: (page?: number) => Promise<void>
+  fetchTrending: () => Promise<void>
   loadMore: () => void
 }
 
@@ -17,6 +19,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   meta: null,
   loading: false,
   error: null,
+  trending: [],
 
   hasMore: () => get().meta?.next != null,
 
@@ -49,6 +52,15 @@ export const useFeedStore = create<FeedState>((set, get) => ({
       set({ error: e })
     } finally {
       set({ loading: false })
+    }
+  },
+
+  async fetchTrending() {
+    try {
+      const res = await apiFetch('/api/v/feeds/trending', { query: { limit: 5 } })
+      set({ trending: res.posts ?? [] })
+    } catch (e) {
+      console.error('fetchTrending error:', e)
     }
   },
 

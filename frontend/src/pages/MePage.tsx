@@ -193,10 +193,13 @@ export default function MePage() {
               <SgDsLibraryAlert status="info" message="크리에이터 신청이 접수되어 심사 중입니다. 승인되면 알려드릴게요." />
             )}
             {creator?.status === 'active' && (
-              <SgDsLibraryStack direction="row" align="center" gap="md">
+              <SgDsLibraryStack direction="row" align="center" gap="sm" wrap={true}>
                 <SgDsLibraryText as="p" variant="body-sm" tone="secondary" style={{ flex: '1 1 0%' }}>
                   크리에이터로 활동 중입니다.
                 </SgDsLibraryText>
+                <SgDsLibraryButton variant="primary" size="sm" leadingIcon="square-pen" onClick={() => navigate('/studio/new')}>
+                  새 포스트
+                </SgDsLibraryButton>
                 <SgDsLibraryButton variant="soft" size="sm" trailingIcon="chevron-right" onClick={() => navigate(`/creator/${creator.id}`)}>
                   내 크리에이터 프로필
                 </SgDsLibraryButton>

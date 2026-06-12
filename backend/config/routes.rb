@@ -72,6 +72,7 @@ Rails.application.routes.draw do
           get :discover
           get :creators
           get :videos
+          get :trending
         end
       end
       resources :follows, only: %i[create destroy] do

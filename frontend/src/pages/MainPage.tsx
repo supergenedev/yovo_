@@ -38,6 +38,7 @@ import { useMeStore } from '@/stores/me'
 import { useCreatorStore } from '@/stores/creator'
 import { apiFetch } from '@/lib/api'
 import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '@/stores/auth'
 
 // ---- helpers ----------------------------------------------------------------
 
@@ -85,9 +86,16 @@ export default function MainPage() {
   const meStore = useMeStore()
   const creatorStore = useCreatorStore()
   const navigate = useNavigate()
+  const logout = useAuthStore((s) => s.logout)
+
+  async function handleLogout() {
+    await logout()
+    navigate('/auth')
+  }
 
   useEffect(() => {
     feedStore.fetchDiscover()
+    feedStore.fetchTrending()
     creatorStore.fetchRecommended()
     if (meStore.following.length === 0) meStore.fetchFollowing()
   }, [])
@@ -204,6 +212,7 @@ export default function MainPage() {
 
   const me = meStore.user
   const recommended = creatorStore.recommended
+  const trending = feedStore.trending
   const posts = sortedPosts(feedStore.posts)
   // 서포터 전용 탭: 팔로우 피드 중 유료/멤버십(전체공개 아님) 콘텐츠만
   const supporterPosts = posts.filter((p: any) => p.view_type && p.view_type !== 'everyone')
@@ -638,10 +647,10 @@ export default function MainPage() {
               avatarSrc={me?.profile_image ?? undefined}
               style={{ width: '100%' }}
               name={me?.nickname ?? '사용자'}
-              meta={`@${me?.handle ?? me?.email ?? 'me'} · 크리에이터`}
+              meta={`@${me?.username ?? 'me'} · ${me?.creator_user?.status === 'active' ? '크리에이터' : '팬'}`}
               initials={getInitials(me?.nickname)}
               avatarTone="purple"
-              verified={true}
+              verified={me?.creator_user?.status === 'active'}
               size="md"
             >
               <SgDsLibraryButtonPopover
@@ -656,9 +665,10 @@ export default function MainPage() {
                 closeOnItemClick={true}
               >
                 <SgDsLibraryPopoverList>
-                  <SgDsLibraryPopoverItem icon="circle-user">프로필</SgDsLibraryPopoverItem>
-                  <SgDsLibraryPopoverItem icon="layout-dashboard">대시보드</SgDsLibraryPopoverItem>
-                  <SgDsLibraryPopoverItem icon="settings">설정</SgDsLibraryPopoverItem>
+                  <SgDsLibraryPopoverItem icon="circle-user" onClick={() => navigate('/me')}>프로필</SgDsLibraryPopoverItem>
+                  <SgDsLibraryPopoverItem icon="book-marked" onClick={() => navigate('/library')}>라이브러리</SgDsLibraryPopoverItem>
+                  <SgDsLibraryPopoverItem icon="settings" onClick={() => navigate('/me')}>설정</SgDsLibraryPopoverItem>
+                  <SgDsLibraryPopoverItem icon="log-out" onClick={handleLogout}>로그아웃</SgDsLibraryPopoverItem>
                 </SgDsLibraryPopoverList>
               </SgDsLibraryButtonPopover>
             </SgDsLibraryUserBlock>
@@ -680,17 +690,32 @@ export default function MainPage() {
           </SgDsLibraryUserCardSection>
         </SgDsLibraryUserCard>
 
-        {/* YOVO 트랜딩 — dummy data (backend not available) */}
+        {/* YOVO 트렌딩 — 실제 포스트의 (좋아요 + 댓글) 합산 순위. 동률이면 먼저 올라온 순 */}
         <SgDsLibraryStack style={{ height: 'fit-content' }} direction="column" gap="none">
           <SgDsLibraryStack style={{ padding: '0px', margin: '0px' }} direction="row" align="center" justify="between">
-            <SgDsLibraryText as="h3" variant="ui" weight="semibold">YOVO 트랜딩</SgDsLibraryText>
-            <SgDsLibraryLink tailIcon="chevron-right" external={false} variant="subtle" size="sm" href="#">모두보기</SgDsLibraryLink>
+            <SgDsLibraryText as="h3" variant="ui" weight="semibold">YOVO 트렌딩</SgDsLibraryText>
+            <SgDsLibraryLink tailIcon="chevron-right" external={false} variant="subtle" size="sm" href="#" onClick={(e: React.MouseEvent) => { e.preventDefault(); navigate('/video') }}>모두보기</SgDsLibraryLink>
           </SgDsLibraryStack>
-          <SgDsLibraryTopicRow rank={1} title="달이 지는 도시" sub="317K 시청 · 1,840 후원자" delta="+218%" deltaTone="brand" divider={true} />
-          <SgDsLibraryTopicRow rank={2} title="#synthwave" sub="이번 주 새 트랙 218개" delta="+94%" deltaTone="neutral" divider={true} />
-          <SgDsLibraryTopicRow rank={3} title="한국어 내레이션" sub="12개 모집 진행 중" delta="+61%" deltaTone="neutral" divider={true} />
-          <SgDsLibraryTopicRow rank={4} title="Lumen-X EP.4 비하인드" sub="신규 멤버 +182 / 7일" delta="—" deltaTone="neutral" divider={true} />
-          <SgDsLibraryTopicRow rank={5} title="aether.studio" sub="「여름 끝의 라디오」 응답 모집" delta="NEW" deltaTone="brand" divider={false} />
+          {trending.length > 0
+            ? trending.map((post: any, i: number) => (
+              <SgDsLibraryTopicRow
+                key={post.id}
+                rank={i + 1}
+                title={post.title_ko || post.creator_user?.nickname || '제목 없음'}
+                sub={`♥ ${post.likes_count ?? 0} · 💬 ${post.comments_count ?? 0}`}
+                delta={post.creator_user?.nickname ?? ''}
+                deltaTone="neutral"
+                divider={i < trending.length - 1}
+                style={{ cursor: 'pointer' }}
+                onClick={() => navigate('/video/' + post.id)}
+              />
+            ))
+            : (
+              <SgDsLibraryText as="p" variant="caption" tone="tertiary" style={{ padding: 'var(--ds-spacing-space-2) 0' }}>
+                아직 트렌딩 작품이 없어요.
+              </SgDsLibraryText>
+            )
+          }
         </SgDsLibraryStack>
 
         {/* 팔로우 추천 — from creatorStore.recommended */}
