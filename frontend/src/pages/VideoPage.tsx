@@ -68,6 +68,7 @@ export default function VideoPage() {
   const [creatorPosts, setCreatorPosts] = useState<any[]>([])
   const [similarPosts, setSimilarPosts] = useState<any[]>([])
   const [comments, setComments] = useState<any[]>([])
+  const [trending, setTrending] = useState<any[]>([])
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
 
   // comment reply state
@@ -99,6 +100,13 @@ export default function VideoPage() {
       .then((res: any) => setSimilarPosts(res.data ?? []))
       .catch(() => setSimilarPosts([]))
   }, [id])
+
+  // 트렌딩: 실제 포스트 (좋아요+댓글) 순위. 영상이 바뀌어도 한 번만 로드한다.
+  useEffect(() => {
+    apiFetch('/api/v/feeds/trending', { query: { limit: 5 } })
+      .then((res: any) => setTrending(res.posts ?? []))
+      .catch(() => setTrending([]))
+  }, [])
 
   const prevCreatorId = useRef<any>(null)
   useEffect(() => {
@@ -789,14 +797,29 @@ export default function VideoPage() {
               <SgDsLibraryStack style={{ height: 'fit-content' }} gap="none" direction="column">
                 <SgDsLibraryStack style={{ height: 'fit-content' }} direction="column" gap="none">
                   <SgDsLibraryStack style={{ padding: '0px', margin: '0px' }} direction="row" align="center" justify="between" height="21px">
-                    <SgDsLibraryText as="h3" variant="ui" weight="semibold">YOVO 트랜딩</SgDsLibraryText>
+                    <SgDsLibraryText as="h3" variant="ui" weight="semibold">YOVO 트렌딩</SgDsLibraryText>
                     <SgDsLibraryLink tailIcon="chevron-right" external={false} variant="subtle" size="sm" href="/video">모두보기</SgDsLibraryLink>
                   </SgDsLibraryStack>
-                  <SgDsLibraryTopicRow rank={1} title="달이 지는 도시" sub="317K 시청 · 1,840 후원자" delta="+218%" deltaTone="brand" divider={true} />
-                  <SgDsLibraryTopicRow rank={2} title="#synthwave" sub="이번 주 새 트랙 218개" delta="+94%" deltaTone="neutral" divider={true} />
-                  <SgDsLibraryTopicRow rank={3} title="한국어 내레이션" sub="12개 모집 진행 중" delta="+61%" deltaTone="neutral" divider={true} />
-                  <SgDsLibraryTopicRow rank={4} title="Lumen-X EP.4 비하인드" sub="신규 멤버 +182 / 7일" delta="—" deltaTone="neutral" divider={true} />
-                  <SgDsLibraryTopicRow rank={5} title="aether.studio" sub="「여름 끝의 라디오」 응답 모집" delta="NEW" deltaTone="brand" divider={false} />
+                  {trending.length > 0
+                    ? trending.map((p: any, i: number) => (
+                      <SgDsLibraryTopicRow
+                        key={p.id}
+                        rank={i + 1}
+                        title={p.title_ko || p.creator_user?.nickname || '제목 없음'}
+                        sub={`♥ ${p.likes_count ?? 0} · 💬 ${p.comments_count ?? 0}`}
+                        delta={p.creator_user?.nickname ?? ''}
+                        deltaTone="neutral"
+                        divider={i < trending.length - 1}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => navigate('/video/' + p.id)}
+                      />
+                    ))
+                    : (
+                      <SgDsLibraryText as="p" variant="caption" tone="tertiary" style={{ padding: 'var(--ds-spacing-space-2) 0' }}>
+                        아직 트렌딩 작품이 없어요.
+                      </SgDsLibraryText>
+                    )
+                  }
                 </SgDsLibraryStack>
               </SgDsLibraryStack>
 
