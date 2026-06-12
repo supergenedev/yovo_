@@ -15,6 +15,14 @@ import {
 } from '@/libraries/sg-ds-library/components'
 import { useStudioStore, type CreatePostInput } from '@/stores/studio'
 import { useMeStore } from '@/stores/me'
+import { extractVideoFrame } from '@/lib/videoThumbnail'
+
+interface FilePreview {
+  name: string
+  kind: 'image' | 'video'
+  url: string          // 미리보기 objectURL ('' 이면 생성 중)
+  thumbBlob?: Blob     // 동영상에서 추출한 썸네일(업로드에 포함)
+}
 
 const CONTENT_TYPES = [
   { label: '영상', value: 'video' },
@@ -41,6 +49,7 @@ export default function PostComposerPage() {
   const [viewType, setViewType] = useState<CreatePostInput['view_type']>('everyone')
   const [price, setPrice] = useState('100')
   const [files, setFiles] = useState<File[]>([])
+  const [previews, setPreviews] = useState<FilePreview[]>([])
   const [feedback, setFeedback] = useState<{ status: 'success' | 'danger' | 'info'; message: string } | null>(null)
 
   const creator = me.user?.creator_user
@@ -53,7 +62,29 @@ export default function PostComposerPage() {
   const canPost = creator?.status === 'active'
 
   function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    setFiles(Array.from(e.target.files ?? []))
+    const list = Array.from(e.target.files ?? [])
+    setFiles(list)
+    // 이전 미리보기 URL 정리(메모리 누수 방지)
+    setPreviews((prev) => { prev.forEach((p) => p.url && URL.revokeObjectURL(p.url)); return prev })
+
+    const next: FilePreview[] = list.map((f) => {
+      const kind = f.type.startsWith('video/') ? 'video' : 'image'
+      return { name: f.name, kind, url: kind === 'image' ? URL.createObjectURL(f) : '' }
+    })
+    setPreviews(next)
+
+    // 동영상은 비동기로 중간 랜덤 프레임을 추출해 썸네일을 채운다
+    list.forEach((f, i) => {
+      if (!f.type.startsWith('video/')) return
+      extractVideoFrame(f)
+        .then(({ url, blob }) => {
+          setPreviews((prev) => prev.map((p, idx) => (idx === i ? { ...p, url, thumbBlob: blob } : p)))
+        })
+        .catch(() => {
+          // 추출 실패 시 미리보기는 비워두되 업로드는 그대로 진행
+          setPreviews((prev) => prev.map((p, idx) => (idx === i ? { ...p, url: 'failed' } : p)))
+        })
+    })
   }
 
   async function handleSubmit(status: 'draft' | 'published') {
@@ -63,6 +94,11 @@ export default function PostComposerPage() {
       return
     }
     try {
+      // 동영상에서 추출한 썸네일을 이미지로 함께 업로드 → 피드/VIDEO 카드 썸네일로 사용
+      const thumbFiles = previews
+        .filter((p) => p.kind === 'video' && p.thumbBlob)
+        .map((p, idx) => new File([p.thumbBlob as Blob], `thumb-${idx}.jpg`, { type: 'image/jpeg' }))
+
       await studio.createPost({
         title_ko: title.trim(),
         body_ko: body.trim() || undefined,
@@ -70,7 +106,7 @@ export default function PostComposerPage() {
         view_type: viewType,
         content_price: viewType === 'buyer_only' ? Number(price) || 0 : undefined,
         status,
-        media: files,
+        media: [...files, ...thumbFiles],
       })
       setFeedback({ status: 'success', message: status === 'published' ? '포스트가 게시되었습니다!' : '임시 저장되었습니다.' })
       // 게시 직후 내 크리에이터 페이지로 이동
@@ -194,23 +230,40 @@ export default function PostComposerPage() {
               <SgDsLibraryButton variant="outline" size="md" leadingIcon="upload" onClick={() => fileInputRef.current?.click()}>
                 이미지 / 영상 선택
               </SgDsLibraryButton>
-              {files.length > 0 && (
+              {previews.length > 0 && (
                 <SgDsLibraryStack direction="row" gap="sm" wrap={true}>
-                  {files.map((f, i) => (
-                    f.type.startsWith('image/') ? (
-                      <SgDsLibraryMedia
-                        key={i}
-                        src={URL.createObjectURL(f)}
-                        rounded="md"
-                        aspectRatio="1 / 1"
-                        fit="cover"
-                        style={{ width: '88px' }}
-                      />
-                    ) : (
-                      <SgDsLibraryCard key={i} variant="outline" padding="sm" style={{ width: '88px', height: '88px' }}>
-                        <SgDsLibraryText as="span" variant="caption" tone="tertiary" truncateLines="3">{f.name}</SgDsLibraryText>
-                      </SgDsLibraryCard>
-                    )
+                  {previews.map((p, i) => (
+                    <div key={i} style={{ position: 'relative', width: '96px', height: '96px' }}>
+                      {p.url && p.url !== 'failed' ? (
+                        <>
+                          <SgDsLibraryMedia
+                            src={p.url}
+                            rounded="md"
+                            aspectRatio="1 / 1"
+                            fit="cover"
+                            style={{ width: '96px', height: '96px' }}
+                          />
+                          {p.kind === 'video' && (
+                            <SgDsLibraryBadge
+                              status="neutral"
+                              variant="solid"
+                              size="sm"
+                              shape="pill"
+                              icon="play"
+                              style={{ position: 'absolute', left: '4px', bottom: '4px' }}
+                            >
+                              영상
+                            </SgDsLibraryBadge>
+                          )}
+                        </>
+                      ) : (
+                        <SgDsLibraryCard variant="outline" padding="sm" style={{ width: '96px', height: '96px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <SgDsLibraryText as="span" variant="caption" tone="tertiary" align="center">
+                            {p.url === 'failed' ? p.name : '썸네일 생성 중…'}
+                          </SgDsLibraryText>
+                        </SgDsLibraryCard>
+                      )}
+                    </div>
                   ))}
                 </SgDsLibraryStack>
               )}
