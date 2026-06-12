@@ -245,7 +245,12 @@ export default function CreatorProfilePage() {
                 {posts.map((post: any) => (
                   <SgDsLibraryVideoListCard
                     key={post.id}
-                    thumbnailImageUrl={post.locked_thumbnail_url ?? undefined}
+                    thumbnailImageUrl={(post.media ?? []).find((m: any) => m.content_type?.startsWith('image/'))?.url ?? post.locked_thumbnail_url ?? undefined}
+                    locked={post.view_type === 'buyer_only' && !post.interaction_with_me?.purchased}
+                    lockIcon="lock"
+                    badgeText={post.view_type === 'buyer_only' && !post.interaction_with_me?.purchased ? `${(post.content_price ?? 0).toLocaleString()} CRD` : ''}
+                    badgeStatus="warning"
+                    badgeVariant="solid"
                     title={post.title_ko ?? post.title ?? ''}
                     creatorName={creator.nickname ?? ''}
                     meta={timeAgo(post.created_at)}

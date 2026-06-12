@@ -679,7 +679,12 @@ export default function HomePage() {
                     <SgDsLibraryVideoListCard
                       key={post.id}
                       mediaSize="sm"
-                      thumbnailImageUrl={post.locked_thumbnail_url ?? 'https://i.pinimg.com/736x/a8/bf/a3/a8bfa3749e7f7ffaa0441b108d8a23fb.jpg'}
+                      thumbnailImageUrl={(post.media ?? []).find((m: any) => m.content_type?.startsWith('image/'))?.url ?? post.locked_thumbnail_url ?? 'https://i.pinimg.com/736x/a8/bf/a3/a8bfa3749e7f7ffaa0441b108d8a23fb.jpg'}
+                      locked={post.view_type === 'buyer_only' && !post.interaction_with_me?.purchased}
+                      lockIcon="lock"
+                      badgeText={post.view_type === 'buyer_only' && !post.interaction_with_me?.purchased ? `${(post.content_price ?? 0).toLocaleString()} CRD` : ''}
+                      badgeStatus="warning"
+                      badgeVariant="solid"
                       title={post.title_ko ?? post.title_ja ?? '제목 없음'}
                       creatorName={post.creator_user?.nickname ?? '크리에이터'}
                       meta={`${post.views_count ?? 0} 시청`}

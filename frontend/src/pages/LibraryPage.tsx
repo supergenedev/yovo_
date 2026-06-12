@@ -234,7 +234,12 @@ export default function LibraryPage() {
                           style={{ width: '100%', height: 'fit-content' }}
                         >
                           <SgDsLibraryVideoListCard
-                            thumbnailImageUrl={post.locked_thumbnail_url ?? undefined}
+                            thumbnailImageUrl={(post.media ?? []).find((m: any) => m.content_type?.startsWith('image/'))?.url ?? post.locked_thumbnail_url ?? undefined}
+                            locked={post.view_type === 'buyer_only' && !post.interaction_with_me?.purchased}
+                            lockIcon="lock"
+                            badgeText={post.view_type === 'buyer_only' && !post.interaction_with_me?.purchased ? `${(post.content_price ?? 0).toLocaleString()} CRD` : ''}
+                            badgeStatus="warning"
+                            badgeVariant="solid"
                             avatarSrc={post.creator_user?.profile_image ?? undefined}
                             style={{ height: 'fit-content', cursor: 'pointer' }}
                             title={post.title_ko ?? post.title ?? ''}
@@ -309,7 +314,12 @@ export default function LibraryPage() {
                           style={{ width: '100%', height: 'fit-content' }}
                         >
                           <SgDsLibraryVideoListCard
-                            thumbnailImageUrl={post.locked_thumbnail_url ?? undefined}
+                            thumbnailImageUrl={(post.media ?? []).find((m: any) => m.content_type?.startsWith('image/'))?.url ?? post.locked_thumbnail_url ?? undefined}
+                            locked={post.view_type === 'buyer_only' && !post.interaction_with_me?.purchased}
+                            lockIcon="lock"
+                            badgeText={post.view_type === 'buyer_only' && !post.interaction_with_me?.purchased ? `${(post.content_price ?? 0).toLocaleString()} CRD` : ''}
+                            badgeStatus="warning"
+                            badgeVariant="solid"
                             avatarSrc={post.creator_user?.profile_image ?? undefined}
                             style={{ height: 'fit-content', cursor: 'pointer' }}
                             title={post.title_ko ?? post.title ?? ''}
