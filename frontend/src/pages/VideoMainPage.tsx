@@ -57,9 +57,12 @@ function isLockedPost(p: any): boolean {
 function lockBadgeText(p: any): string {
   return isLockedPost(p) ? `${(p.content_price ?? 0).toLocaleString()} CRD` : ''
 }
-// 잠금 아닌 영상 포스트의 재생 가능한 video URL (썸네일을 실제 프레임으로 쓰기 위함)
+// 영상 프레임 썸네일 폴백용 video URL.
+// 업로드 시 추출해 등록한 이미지 썸네일이 있으면 그걸 쓰고(영상 로드 없음),
+// 썸네일이 없는 경우에만 영상에서 프레임을 그린다.
 function videoSrcOf(p: any): string {
   if (isLockedPost(p)) return ''
+  if (getPostThumbnail(p)) return '' // 등록된 썸네일이 있으면 정적 이미지 사용
   return (p?.media ?? []).find((m: any) => m.content_type?.startsWith('video/'))?.url ?? ''
 }
 

@@ -20,8 +20,9 @@ export default function FeedVideo({ src, poster }: { src: string; poster?: strin
       preload="metadata"
       onClick={(e) => e.stopPropagation()}
       onLoadedMetadata={(e) => {
-        // 포스터가 있어도, 브라우저가 검은 첫 프레임을 칠하는 것을 막기 위해
-        // 항상 특정 지점(25%)으로 seek 해 실제 프레임을 그린다.
+        // 등록된 포스터(업로드 시 추출한 썸네일)가 있으면 그대로 보여주고 영상 데이터를
+        // 더 받지 않는다. 포스터가 없을 때만 특정 지점(25%)으로 seek 해 프레임을 그린다.
+        if (poster) return
         const v = e.currentTarget
         if (isFinite(v.duration) && v.duration > 0.2) {
           previewSeekRef.current = true

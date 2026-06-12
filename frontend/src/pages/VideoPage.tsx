@@ -142,6 +142,7 @@ export default function VideoPage() {
   }
   function videoSrcOf(p: any): string {
     if (isLockedPost(p)) return ''
+    if (postThumb(p)) return '' // 등록된 썸네일이 있으면 정적 이미지 사용(영상 로드 없음)
     return (p?.media ?? []).find((m: any) => m.content_type?.startsWith('video/'))?.url ?? ''
   }
 
